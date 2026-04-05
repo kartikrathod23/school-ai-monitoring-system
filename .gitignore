@@ -1,0 +1,17 @@
+node_modules/
+.env
+dist/
+build/
+coverage/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Docker
+*.env
