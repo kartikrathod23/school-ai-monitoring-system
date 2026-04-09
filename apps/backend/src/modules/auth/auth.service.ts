@@ -9,6 +9,9 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const loginUser=async(identifier:string, password:string)=>{
 
+    console.log("Before DB query");
+
+
     const user = await prisma.user.findFirst({
         where:{
             OR:[
@@ -22,10 +25,17 @@ export const loginUser=async(identifier:string, password:string)=>{
         throw new Error("User not found");
     }
 
+    console.log("After DB query");
+
+    console.log("Before bcrypt");
+
+
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if(!isMatch){
         throw new Error("Invalid Password");
     }
+
+    console.log("After bcrypt");
 
     const token = jwt.sign(
         {

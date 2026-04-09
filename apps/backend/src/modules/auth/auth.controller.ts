@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { loginUser } from "./auth.service";
 
 export const login = async(req:Request, res:Response)=>{
+    console.log("Login API hit");
     try{
         const {identifier, password} = req.body;
 
@@ -13,10 +14,10 @@ export const login = async(req:Request, res:Response)=>{
 
         const result = await loginUser(identifier,password);
 
-        res.json(result);
+        return res.json(result);
     }
     catch(error:any){
-        res.status(400).json({
+        return res.status(400).json({
             message:error.message,
         });
     }
