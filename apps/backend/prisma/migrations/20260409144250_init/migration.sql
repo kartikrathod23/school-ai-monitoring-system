@@ -7,6 +7,7 @@ CREATE TYPE "FaceStatus" AS ENUM ('NOT_ADDED', 'ADDED', 'RESCAN');
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
+    "userCode" TEXT NOT NULL,
     "role" "Role" NOT NULL,
     "mobileNumber" TEXT NOT NULL,
     "email" TEXT,
@@ -77,6 +78,9 @@ CREATE TABLE "TeacherSection" (
 
     CONSTRAINT "TeacherSection_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_userCode_key" ON "User"("userCode");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_mobileNumber_key" ON "User"("mobileNumber");
