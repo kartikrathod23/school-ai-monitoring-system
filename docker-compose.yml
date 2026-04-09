@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: Kkr@13245
       POSTGRES_DB: school_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
