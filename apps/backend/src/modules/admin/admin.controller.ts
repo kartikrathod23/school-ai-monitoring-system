@@ -1,5 +1,5 @@
 import { Request,Response } from "express";
-import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool} from "./admin.service";
+import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService} from "./admin.service";
 
 export const createSchool = async (req:Request, res:Response)=>{
     try{
@@ -89,6 +89,45 @@ export const getStandards = async (req: Request, res: Response) => {
       success: true,
       message: "Standards fetched successfully",
       data: standards,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
+
+// teacher section
+
+export const createTeacher = async (req: Request, res: Response) => {
+  try {
+    const teacher = await createTeacherService(req.body);
+
+    return res.status(201).json({
+      success: true,
+      message: "Teacher created successfully",
+      data: teacher,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
+
+
+export const createStudent = async (req: Request, res: Response) => {
+  try {
+    const student = await createStudentService(req.body);
+
+    return res.status(201).json({
+      success: true,
+      message: "Student created successfully",
+      data: student,
     });
   } catch (error: any) {
     return res.status(400).json({
