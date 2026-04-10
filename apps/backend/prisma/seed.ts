@@ -11,6 +11,8 @@ async function main() {
     update: {},
     create: {
       userCode: "ADM_001",
+      firstName: "Admin",
+      lastName: "User",
       role: "ADMIN",
       mobileNumber: "9999999999",
       passwordHash: hashedPassword,
