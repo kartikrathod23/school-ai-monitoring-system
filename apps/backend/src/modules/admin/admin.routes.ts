@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createSchool,createStandard ,createSection,getSchools,getStandards,createStudent,createTeacher} from "./admin.controller";
+import { createSchool,createStandard ,createSection,getSchools,getStandards,createStudent,createTeacher, getTeacher, getTeachers, getStudent, getStudents} from "./admin.controller";
 import { authenticate } from "../../common/middlewares/auth.middleware";
 import { authorise } from "../../common/middlewares/role.guard";
 import { validate } from "../../common/middlewares/validate.middleware";
@@ -15,5 +15,11 @@ router.get("/schools/:schoolId/standards",authenticate,authorise(["ADMIN"]),getS
 
 router.post("/teachers", authenticate, authorise(["ADMIN"]),validate(createTeacherSchema),createTeacher);
 router.post("/students",authenticate, authorise(["ADMIN"]),validate(createStudentSchema),createStudent);
+
+router.get("/teachers",authenticate,authorise(["ADMIN"]),getTeachers);
+router.get("/students", authenticate, authorise(["ADMIN"]), getStudents);
+router.get("/teachers/:id", authenticate, authorise(["ADMIN"]), getTeacher);
+router.get("/students/:id", authenticate, authorise(["ADMIN"]),getStudent);
+
 
 export default router;

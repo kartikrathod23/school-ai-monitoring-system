@@ -1,5 +1,6 @@
 import { Request,Response } from "express";
-import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService} from "./admin.service";
+import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById} from "./admin.service";
+
 
 export const createSchool = async (req:Request, res:Response)=>{
     try{
@@ -119,6 +120,32 @@ export const createTeacher = async (req: Request, res: Response) => {
   }
 };
 
+export const getTeachers = async (req:Request, res:Response) =>{
+  const {page, limit, search} = req.query;
+
+  const result = await getTeachersService({
+    page:Number(page),
+    limit:Number(limit),
+    search: search as string,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message:"Teacher fetched successfully!",
+    data:result,
+  })
+}
+
+export const getTeacher = async(req:Request, res:Response)=>{
+  const teacher = await getTeacherById(req.params.id as string);
+
+  return res.status(200).json({
+    success: true,
+    mesaage:"Teacher fetched successfully!",
+    data:teacher,
+  })
+
+}
 
 export const createStudent = async (req: Request, res: Response) => {
   try {
@@ -136,4 +163,32 @@ export const createStudent = async (req: Request, res: Response) => {
       data: null,
     });
   }
+};
+
+
+export const getStudents = async (req: Request, res: Response) => {
+  const { page, limit, search, sectionId } = req.query;
+
+  const result = await getStudentsService({
+    page: Number(page),
+    limit: Number(limit),
+    search: search as string,
+    sectionId: sectionId as string,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Students fetched successfully",
+    data: result,
+  });
+};
+
+export const getStudent = async (req: Request, res: Response) => {
+  const student = await getStudentById(req.params.id as string);
+
+  return res.status(200).json({
+    success: true,
+    message: "Student fetched successfully",
+    data: student,
+  });
 };

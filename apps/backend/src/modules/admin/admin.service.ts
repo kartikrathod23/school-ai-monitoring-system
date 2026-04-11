@@ -149,6 +149,75 @@ export const createTeacherService = async (data: {
   return teacher;
 };
 
+
+export const getTeachersService = async (query: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) => {
+  const page = query.page || 1;
+  const limit = query.limit || 10;
+  const skip = (page - 1) * limit;
+
+  const whereCondition = query.search
+    ? {
+        user: {
+          OR: [
+            { firstName: { contains: query.search, mode: "insensitive" } },
+            { lastName: { contains: query.search, mode: "insensitive" } },
+            { userCode: { contains: query.search, mode: "insensitive" } },
+          ],
+        },
+      }
+    : {};
+
+  const [teachers, total] = await Promise.all([
+    prisma.teacher.findMany({
+      where: whereCondition,
+      skip,
+      take: limit,
+      include: {
+        user: true,
+        sections: {
+          include: {
+            section: true,
+          },
+        },
+      },
+    }),
+    prisma.teacher.count({ where: whereCondition }),
+  ]);
+
+  return {
+    teachers,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+
+export const getTeacherById = async (id: string) => {
+  const teacher = await prisma.teacher.findUnique({
+    where: { id },
+    include: {
+      user: true,
+      sections: {
+        include: {
+          section: true,
+        },
+      },
+    },
+  });
+
+  if (!teacher) throw new Error("Teacher not found");
+
+  return teacher;
+};
+
 // studetn handling
 export const createStudentService = async (data: {
   firstName: string;
@@ -216,11 +285,72 @@ export const createStudentService = async (data: {
 };
 
 
-export const getTeacherService = async()=>{
-  try{
-    
-  }
-  catch(e:any){
+export const getStudentsService = async (query: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sectionId?: string;
+  faceStatus?: string;
+}) => {
+  const page = query.page || 1;
+  const limit = query.limit || 10;
+  const skip = (page - 1) * limit;
 
+  const whereCondition: any = {};
+
+  if (query.sectionId) {
+    whereCondition.sectionId = query.sectionId;
   }
-}
+
+  if (query.faceStatus) {
+    whereCondition.faceStatus = query.faceStatus;
+  }
+
+  if (query.search) {
+    whereCondition.user = {
+      OR: [
+        { firstName: { contains: query.search, mode: "insensitive" } },
+        { lastName: { contains: query.search, mode: "insensitive" } },
+        { userCode: { contains: query.search, mode: "insensitive" } },
+      ],
+    };
+  }
+
+  const [students, total] = await Promise.all([
+    prisma.student.findMany({
+      where: whereCondition,
+      skip,
+      take: limit,
+      include: {
+        user: true,
+        section: true,
+      },
+    }),
+    prisma.student.count({ where: whereCondition }),
+  ]);
+
+  return {
+    students,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+
+export const getStudentById = async (id: string) => {
+  const student = await prisma.student.findUnique({
+    where: { id },
+    include: {
+      user: true,
+      section: true,
+    },
+  });
+
+  if (!student) throw new Error("Student not found");
+
+  return student;
+};
