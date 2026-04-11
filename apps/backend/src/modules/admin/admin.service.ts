@@ -214,3 +214,13 @@ export const createStudentService = async (data: {
 
   return student;
 };
+
+
+export const getTeacherService = async()=>{
+  try{
+    
+  }
+  catch(e:any){
+
+  }
+}
