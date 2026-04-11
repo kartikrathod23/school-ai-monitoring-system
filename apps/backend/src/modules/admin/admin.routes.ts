@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createSchool,createStandard ,createSection,getSchools,getStandards,createStudent,createTeacher, getTeacher, getTeachers, getStudent, getStudents} from "./admin.controller";
+import { createSchool,createStandard ,createSection,getSchools,getStandards,createStudent,createTeacher, getTeacher, getTeachers, getStudent, getStudents,updateStudent, updateTeacher, deleteStudent, deleteTeacher} from "./admin.controller";
 import { authenticate } from "../../common/middlewares/auth.middleware";
 import { authorise } from "../../common/middlewares/role.guard";
 import { validate } from "../../common/middlewares/validate.middleware";
@@ -20,6 +20,14 @@ router.get("/teachers",authenticate,authorise(["ADMIN"]),getTeachers);
 router.get("/students", authenticate, authorise(["ADMIN"]), getStudents);
 router.get("/teachers/:id", authenticate, authorise(["ADMIN"]), getTeacher);
 router.get("/students/:id", authenticate, authorise(["ADMIN"]),getStudent);
+
+
+router.put("/students/:id",authenticate,authorise(["ADMIN"]),updateStudent);
+router.put("/teachers/:id",authenticate,authorise(["ADMIN"]),updateTeacher);
+
+// DELETE
+router.delete("/students/:id",authenticate,authorise(["ADMIN"]),deleteStudent);
+router.delete("/teachers/:id",authenticate,authorise(["ADMIN"]),deleteTeacher);
 
 
 export default router;

@@ -218,6 +218,77 @@ export const getTeacherById = async (id: string) => {
   return teacher;
 };
 
+
+export const updateTeacherService = async (
+  id: string,
+  data: {
+    firstName?: string;
+    lastName?: string;
+    sectionIds?: string[];
+  }
+) => {
+  const teacher = await prisma.teacher.findUnique({
+    where: { id },
+  });
+
+  if (!teacher) throw new Error("Teacher not found");
+
+  // Validate sections
+  if (data.sectionIds) {
+    const sections = await prisma.section.findMany({
+      where: { id: { in: data.sectionIds } },
+    });
+
+    if (sections.length !== data.sectionIds.length) {
+      throw new Error("Invalid section(s)");
+    }
+  }
+
+  //Update
+  const updated = await prisma.teacher.update({
+    where: { id },
+    data: {
+      user: {
+        update: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+        },
+      },
+      sections: data.sectionIds
+        ? {
+            deleteMany: {}, // remove old
+            create: data.sectionIds.map((sectionId) => ({
+              sectionId,
+            })),
+          }
+        : undefined,
+    },
+    include: {
+      user: true,
+      sections: true,
+    },
+  });
+
+  return updated;
+};
+
+
+export const deleteTeacherService = async (id: string) => {
+  const teacher = await prisma.teacher.findUnique({
+    where: { id },
+  });
+
+  if (!teacher) throw new Error("Teacher not found");
+
+  await prisma.teacher.delete({
+    where: { id },
+  });
+
+  return true;
+};
+
+
+
 // studetn handling
 export const createStudentService = async (data: {
   firstName: string;
@@ -353,4 +424,81 @@ export const getStudentById = async (id: string) => {
   if (!student) throw new Error("Student not found");
 
   return student;
+};
+
+
+export const updateStudentService = async (
+  id: string,
+  data: {
+    firstName?: string;
+    lastName?: string;
+    sectionId?: string;
+    rollNumber?: number;
+    faceStatus?: "NOT_ADDED" | "ADDED" | "RESCAN";
+  }
+) => {
+
+  const student = await prisma.student.findUnique({
+    where: { id },
+    include: { user: true },
+  });
+
+  if (!student) throw new Error("Student not found");
+
+  if (data.sectionId) {
+    const section = await prisma.section.findUnique({
+      where: { id: data.sectionId },
+    });
+    if (!section) throw new Error("Section not found");
+  }
+
+  if (data.rollNumber) {
+    const existing = await prisma.student.findFirst({
+      where: {
+        sectionId: data.sectionId || student.sectionId,
+        rollNumber: data.rollNumber,
+        NOT: { id },
+      },
+    });
+
+    if (existing) {
+      throw new Error("Roll number already exists in this section");
+    }
+  }
+
+  const updated = await prisma.student.update({
+    where: { id },
+    data: {
+      sectionId: data.sectionId,
+      rollNumber: data.rollNumber,
+      faceStatus: data.faceStatus,
+      user: {
+        update: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+        },
+      },
+    },
+    include: {
+      user: true,
+      section: true,
+    },
+  });
+
+  return updated;
+};
+
+
+export const deleteStudentService = async (id: string) => {
+  const student = await prisma.student.findUnique({
+    where: { id },
+  });
+
+  if (!student) throw new Error("Student not found");
+
+  await prisma.student.delete({
+    where: { id },
+  });
+
+  return true;
 };

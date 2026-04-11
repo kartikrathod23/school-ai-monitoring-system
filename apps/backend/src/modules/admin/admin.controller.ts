@@ -1,5 +1,5 @@
 import { Request,Response } from "express";
-import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById} from "./admin.service";
+import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById,updateStudentService,updateTeacherService,deleteStudentService,deleteTeacherService} from "./admin.service";
 
 
 export const createSchool = async (req:Request, res:Response)=>{
@@ -147,6 +147,28 @@ export const getTeacher = async(req:Request, res:Response)=>{
 
 }
 
+export const updateTeacher = async (req: Request, res: Response) => {
+  const updated = await updateTeacherService(req.params.id as string, req.body);
+
+  return res.status(200).json({
+    success: true,
+    message: "Teacher updated successfully",
+    data: updated,
+  });
+};
+
+export const deleteTeacher = async (req: Request, res: Response) => {
+  await deleteTeacherService(req.params.id as string);
+
+  return res.status(200).json({
+    success: true,
+    message: "Teacher deleted successfully",
+    data: null,
+  });
+};
+
+
+
 export const createStudent = async (req: Request, res: Response) => {
   try {
     const student = await createStudentService(req.body);
@@ -190,5 +212,25 @@ export const getStudent = async (req: Request, res: Response) => {
     success: true,
     message: "Student fetched successfully",
     data: student,
+  });
+};
+
+export const updateStudent = async (req: Request, res: Response) => {
+  const updated = await updateStudentService(req.params.id as string, req.body);
+
+  return res.status(200).json({
+    success: true,
+    message: "Student updated successfully",
+    data: updated,
+  });
+};
+
+export const deleteStudent = async (req: Request, res: Response) => {
+  await deleteStudentService(req.params.id as string);
+
+  return res.status(200).json({
+    success: true,
+    message: "Student deleted successfully",
+    data: null,
   });
 };
