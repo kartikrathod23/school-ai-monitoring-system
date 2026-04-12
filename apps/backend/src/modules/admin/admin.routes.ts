@@ -16,12 +16,13 @@ router.get("/schools/:schoolId/standards",authenticate,authorise(["ADMIN"]),getS
 router.post("/teachers", authenticate, authorise(["ADMIN"]),validate(createTeacherSchema),createTeacher);
 router.post("/students",authenticate, authorise(["ADMIN"]),validate(createStudentSchema),createStudent);
 
+// display data
 router.get("/teachers",authenticate,authorise(["ADMIN"]),getTeachers);
 router.get("/students", authenticate, authorise(["ADMIN"]), getStudents);
 router.get("/teachers/:id", authenticate, authorise(["ADMIN"]), getTeacher);
 router.get("/students/:id", authenticate, authorise(["ADMIN"]),getStudent);
 
-
+// updating student
 router.put("/students/:id",authenticate,authorise(["ADMIN"]),updateStudent);
 router.put("/teachers/:id",authenticate,authorise(["ADMIN"]),updateTeacher);
 
