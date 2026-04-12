@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createSchool,createStandard ,createSection,getSchools,getStandards,createStudent,createTeacher, getTeacher, getTeachers, getStudent, getStudents,updateStudent, updateTeacher, deleteStudent, deleteTeacher} from "./admin.controller";
+import { createSchool,createStandard ,createSection,getSchools,getStandards,createStudent,createTeacher, getTeacher, getTeachers, getStudent, getStudents,updateStudent, updateTeacher, deleteStudent, deleteTeacher, getAllSchools,getSectionsByStandard, getDashboardStats, updateFaceStatus} from "./admin.controller";
 import { authenticate } from "../../common/middlewares/auth.middleware";
 import { authorise } from "../../common/middlewares/role.guard";
 import { validate } from "../../common/middlewares/validate.middleware";
@@ -8,7 +8,9 @@ import { createTeacherSchema, createStudentSchema, createSchoolSchema } from "./
 const router=Router();
 
 router.post('/schools',authenticate,authorise(["ADMIN"]),validate(createSchoolSchema),createSchool);
+router.get("/schools-list",authenticate,authorise(["ADMIN"]),getAllSchools);
 router.post('/standards', authenticate,authorise(["ADMIN"]),createStandard);
+router.get("/standards/:standardId/sections",authenticate,authorise(["ADMIN"]),getSectionsByStandard);
 router.post("/sections", authenticate, authorise(["ADMIN"]), createSection);
 router.get("/schools", authenticate, authorise(["ADMIN"]), getSchools);
 router.get("/schools/:schoolId/standards",authenticate,authorise(["ADMIN"]),getStandards);
@@ -29,5 +31,10 @@ router.put("/teachers/:id",authenticate,authorise(["ADMIN"]),updateTeacher);
 router.delete("/students/:id",authenticate,authorise(["ADMIN"]),deleteStudent);
 router.delete("/teachers/:id",authenticate,authorise(["ADMIN"]),deleteTeacher);
 
+// dashboard stats
+router.get("/dashboard",authenticate,authorise(["ADMIN"]),getDashboardStats);
+
+// update face statsu
+router.patch("/students/:id/face-status",authenticate,authorise(["ADMIN"]),updateFaceStatus);
 
 export default router;

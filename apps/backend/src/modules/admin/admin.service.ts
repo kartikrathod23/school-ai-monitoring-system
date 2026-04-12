@@ -35,6 +35,17 @@ export const createStandardService= async(data: {name:string; schoolId:string;})
     return standard;
 }
 
+
+export const getSectionsByStandardService = async (standardId: string) => {
+  return prisma.section.findMany({
+    where: { standardId },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+};
+
 export const createSectionService = async (data: {
   name: string;
   standardId: string;
@@ -502,3 +513,48 @@ export const deleteStudentService = async (id: string) => {
 
   return true;
 };
+
+
+export const getAllSchoolsService = async () => {
+  return prisma.school.findMany({
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+};
+
+
+export const getDashboardStatsService = async () => {
+  const [students, teachers, schools] = await Promise.all([
+    prisma.student.count(),
+    prisma.teacher.count(),
+    prisma.school.count(),
+  ]);
+
+  return {
+    totalStudents: students,
+    totalTeachers: teachers,
+    totalSchools: schools,
+  };
+};
+
+
+// update face status
+export const updateFaceStatusService = async (
+  studentId: string,
+  faceStatus: "NOT_ADDED" | "ADDED" | "RESCAN"
+) => {
+  const student = await prisma.student.findUnique({
+    where: { id: studentId },
+  });
+
+  if (!student) throw new Error("Student not found");
+
+  return prisma.student.update({
+    where: { id: studentId },
+    data: { faceStatus },
+  });
+};
+
+

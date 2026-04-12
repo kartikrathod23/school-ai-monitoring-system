@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { loginUser } from "./auth.service";
+import { loginUser,getMeService } from "./auth.service";
 
 export const login = async(req:Request, res:Response)=>{
     console.log("Login API hit");
@@ -22,3 +22,14 @@ export const login = async(req:Request, res:Response)=>{
         });
     }
 }
+
+
+export const getMe = async (req: any, res: Response) => {
+  const user = await getMeService(req.user.userId);
+
+  return res.status(200).json({
+    success: true,
+    message: "User fetched successfully",
+    data: user,
+  });
+};

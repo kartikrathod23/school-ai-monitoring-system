@@ -1,5 +1,5 @@
 import { Request,Response } from "express";
-import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById,updateStudentService,updateTeacherService,deleteStudentService,deleteTeacherService} from "./admin.service";
+import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById,updateStudentService,updateTeacherService,deleteStudentService,deleteTeacherService, getAllSchoolsService, getSectionsByStandardService,getDashboardStatsService,updateFaceStatusService} from "./admin.service";
 
 
 export const createSchool = async (req:Request, res:Response)=>{
@@ -21,6 +21,16 @@ export const createSchool = async (req:Request, res:Response)=>{
 
 }
 
+export const getAllSchools = async (req: Request, res: Response) => {
+  const schools = await getAllSchoolsService();
+
+  return res.status(200).json({
+    success: true,
+    message: "Schools fetched successfully",
+    data: schools,
+  });
+};
+
 export const createStandard = async(req:Request,res:Response)=>{
     try{
         const standard = await createStandardService(req.body);
@@ -40,6 +50,18 @@ export const createStandard = async(req:Request,res:Response)=>{
     }
 }
 
+
+export const getSectionsByStandard = async (req: Request, res: Response) => {
+  const sections = await getSectionsByStandardService(
+    req.params.standardId as string
+  );
+
+  return res.status(200).json({
+    success: true,
+    message: "Sections fetched successfully",
+    data: sections,
+  });
+};
 
 export const createSection = async (req: Request, res: Response) => {
   try {
@@ -232,5 +254,32 @@ export const deleteStudent = async (req: Request, res: Response) => {
     success: true,
     message: "Student deleted successfully",
     data: null,
+  });
+};
+
+
+export const getDashboardStats = async (req: Request, res: Response) => {
+  const stats = await getDashboardStatsService();
+
+  return res.status(200).json({
+    success: true,
+    message: "Dashboard stats fetched successfully",
+    data: stats,
+  });
+};
+
+
+export const updateFaceStatus = async (req: Request, res: Response) => {
+  const { faceStatus } = req.body;
+
+  const updated = await updateFaceStatusService(
+    req.params.id as string,
+    faceStatus
+  );
+
+  return res.status(200).json({
+    success: true,
+    message: "Face status updated successfully",
+    data: updated,
   });
 };
