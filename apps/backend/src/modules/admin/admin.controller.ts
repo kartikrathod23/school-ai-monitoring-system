@@ -1,5 +1,5 @@
 import { Request,Response } from "express";
-import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById,updateStudentService,updateTeacherService,deleteStudentService,deleteTeacherService, getAllSchoolsService, getSectionsByStandardService,getDashboardStatsService,updateFaceStatusService} from "./admin.service";
+import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById,updateStudentService,updateTeacherService,deleteStudentService,deleteTeacherService, getAllSchoolsService, getSectionsByStandardService,getDashboardStatsService,updateFaceStatusService,deleteSchoolService,updateSchoolService} from "./admin.service";
 
 
 export const createSchool = async (req:Request, res:Response)=>{
@@ -60,10 +60,50 @@ export const createStandard = async(req:Request,res:Response)=>{
         return res.status(400).json({
             success:false,
             message:err.message,
+            errors: err.errors || null,
             data:null
         })
     }
 }
+
+
+export const deleteSchool = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    await deleteSchoolService(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "School deleted successfully",
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+export const updateSchool = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const updated = await updateSchoolService(id, req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "School updated successfully",
+      data: updated,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 
 export const getSectionsByStandard = async (req: Request, res: Response) => {

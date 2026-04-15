@@ -100,6 +100,53 @@ export const getStandardsBySchool = async (schoolId: string) => {
 };
 
 
+export const deleteSchoolService = async (id: string) => {
+  const school = await prisma.school.findUnique({
+    where: { id },
+  });
+
+  if (!school) {
+    throw new Error("School not found");
+  }
+
+  await prisma.school.delete({
+    where: { id },
+  });
+
+  return true;
+};
+
+export const updateSchoolService = async (
+  id: string,
+  data: {
+    name: string;
+    address: string;
+    district?: string;
+    state?: string;
+    pinCode?: string;
+    contactNumber?: string;
+    latitude: number;
+    longitude: number;
+    geoRadius: number;
+  }
+) => {
+  const school = await prisma.school.findUnique({
+    where: { id },
+  });
+
+  if (!school) {
+    throw new Error("School not found");
+  }
+
+  const updated = await prisma.school.update({
+    where: { id },
+    data,
+  });
+
+  return updated;
+};
+
+
 // teacher section
 
 export const createTeacherService = async (data: {

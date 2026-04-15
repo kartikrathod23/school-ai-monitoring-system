@@ -19,8 +19,8 @@ export const createStudentSchema = z.object({
 
 
 export const createSchoolSchema = z.object({
-  name: z.string().min(3),
-  address: z.string().min(5),
+  name: z.string().min(3, "School name must be at least 3 chars"),
+  address: z.string().min(5, "Address is too short"),
 
   district: z.string().optional(),
   state: z.string().optional(),
@@ -31,4 +31,3 @@ export const createSchoolSchema = z.object({
   longitude: z.number(),
   geoRadius: z.number().positive(),
 });
-

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createSchool,createStandard ,createSection,getSchools,getStandards,createStudent,createTeacher, getTeacher, getTeachers, getStudent, getStudents,updateStudent, updateTeacher, deleteStudent, deleteTeacher, getAllSchools,getSectionsByStandard, getDashboardStats, updateFaceStatus} from "./admin.controller";
+import { createSchool,createStandard ,createSection,getSchools,getStandards,createStudent,createTeacher, getTeacher, getTeachers, getStudent, getStudents,updateStudent, updateTeacher, deleteStudent, deleteTeacher, getAllSchools,getSectionsByStandard, getDashboardStats, updateFaceStatus,deleteSchool,updateSchool} from "./admin.controller";
 import { authenticate } from "../../common/middlewares/auth.middleware";
 import { authorise } from "../../common/middlewares/role.guard";
 import { validate } from "../../common/middlewares/validate.middleware";
@@ -14,6 +14,9 @@ router.get("/standards/:standardId/sections",authenticate,authorise(["ADMIN"]),g
 router.post("/sections", authenticate, authorise(["ADMIN"]), createSection);
 router.get("/schools", authenticate, authorise(["ADMIN"]), getSchools);
 router.get("/schools/:schoolId/standards",authenticate,authorise(["ADMIN"]),getStandards);
+
+router.put("/schools/:id",authenticate,authorise(["ADMIN"]),updateSchool);
+router.delete("/schools/:id",authenticate,authorise(["ADMIN"]),deleteSchool);
 
 router.post("/teachers", authenticate, authorise(["ADMIN"]),validate(createTeacherSchema),createTeacher);
 router.post("/students",authenticate, authorise(["ADMIN"]),validate(createStudentSchema),createStudent);

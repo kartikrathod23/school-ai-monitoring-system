@@ -10,6 +10,7 @@ export const validate = (schema:any)=>{
             return res.status(400).json({
                 success: false,
                 message: error.errors?.[0]?.message || "Validation failed",
+                errors: error.errors, 
                 data: null,
             });
         }
