@@ -73,6 +73,33 @@ export const createSectionService = async (data: {
 };
 
 
+export const updateStandardService = async (id: string, name: string) => {
+  return prisma.standard.update({
+    where: { id },
+    data: { name },
+  });
+};
+
+export const deleteStandardService = async (id: string) => {
+  return prisma.standard.delete({
+    where: { id },
+  });
+};
+
+export const updateSectionService = async (id: string, name: string) => {
+  return prisma.section.update({
+    where: { id },
+    data: { name },
+  });
+};
+
+export const deleteSectionService = async (id: string) => {
+  return prisma.section.delete({
+    where: { id },
+  });
+};
+
+
 export const getSchoolsService = async () => {
   const schools = await prisma.school.findMany({
     include: {
@@ -577,16 +604,20 @@ export const getAllSchoolsService = async () => {
 
 
 export const getDashboardStatsService = async () => {
-  const [students, teachers, schools] = await Promise.all([
+  const [students, teachers, schools,sections,standards] = await Promise.all([
     prisma.student.count(),
     prisma.teacher.count(),
     prisma.school.count(),
+    prisma.section.count(),
+    prisma.standard.count(),
   ]);
 
   return {
     totalStudents: students,
     totalTeachers: teachers,
     totalSchools: schools,
+    totalSections: sections,
+    totalStandards: standards,
   };
 };
 

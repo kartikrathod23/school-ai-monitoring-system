@@ -1,5 +1,5 @@
 import { Request,Response } from "express";
-import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById,updateStudentService,updateTeacherService,deleteStudentService,deleteTeacherService, getAllSchoolsService, getSectionsByStandardService,getDashboardStatsService,updateFaceStatusService,deleteSchoolService,updateSchoolService} from "./admin.service";
+import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById,updateStudentService,updateTeacherService,deleteStudentService,deleteTeacherService, getAllSchoolsService, getSectionsByStandardService,getDashboardStatsService,updateFaceStatusService,deleteSchoolService,updateSchoolService,deleteSectionService,deleteStandardService,updateSectionService,updateStandardService} from "./admin.service";
 
 
 export const createSchool = async (req:Request, res:Response)=>{
@@ -173,6 +173,84 @@ export const getStandards = async (req: Request, res: Response) => {
       success: false,
       message: error.message,
       data: null,
+    });
+  }
+};
+
+
+
+export const updateStandard = async (req:Request, res:Response) => {
+  try {
+    const id  = req.params.id as string;
+    const { name } = req.body;
+
+    const standard = await updateStandardService(id, name);
+
+    return res.json({
+      success: true,
+      message: "Standard updated",
+      data: standard,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: "Update failed",
+    });
+  }
+};
+
+export const deleteStandard = async (req:Request, res:Response) => {
+  try {
+    const id  = req.params.id as string;
+
+    await deleteStandardService(id);
+
+    return res.json({
+      success: true,
+      message: "Standard deleted",
+    });
+  } catch {
+    return res.status(400).json({
+      success: false,
+      message: "Delete failed",
+    });
+  }
+};
+
+export const updateSection = async (req:Request, res:Response) => {
+  try {
+    const id = req.params.id as string;
+    const { name } = req.body;
+
+    const section = await updateSectionService(id, name);
+
+    return res.json({
+      success: true,
+      message: "Section updated",
+      data: section,
+    });
+  } catch {
+    return res.status(400).json({
+      success: false,
+      message: "Update failed",
+    });
+  }
+};
+
+export const deleteSection = async (req:Request, res:Response) => {
+  try {
+    const id  = req.params.id as string;
+
+    await deleteSectionService(id);
+
+    return res.json({
+      success: true,
+      message: "Section deleted",
+    });
+  } catch {
+    return res.status(400).json({
+      success: false,
+      message: "Delete failed",
     });
   }
 };

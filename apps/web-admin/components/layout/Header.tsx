@@ -38,7 +38,7 @@ export default function Header() {
   };
 
   return (
-    <div className="h-16 bg-white shadow-sm flex items-center justify-between px-6">
+    <div className="h-16 bg-white border-b-2 border-b-gray-200 shadow-sm flex items-center justify-between px-6 py-[2.3rem]">
       
       <div>
         <h1 className="text-xl font-semibold text-gray-800">
