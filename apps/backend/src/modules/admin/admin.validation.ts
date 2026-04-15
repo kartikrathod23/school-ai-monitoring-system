@@ -21,6 +21,12 @@ export const createStudentSchema = z.object({
 export const createSchoolSchema = z.object({
   name: z.string().min(3),
   address: z.string().min(5),
+
+  district: z.string().optional(),
+  state: z.string().optional(),
+  pinCode: z.string().optional(),
+  contactNumber: z.string().optional(),
+
   latitude: z.number(),
   longitude: z.number(),
   geoRadius: z.number().positive(),

@@ -4,13 +4,28 @@ import { createSchoolService, createStandardService,createSectionService,getScho
 
 export const createSchool = async (req:Request, res:Response)=>{
     try{
-        const {name, address, latitude, longitude, geoRadius} = req.body;
+        const {
+          name,
+          address,
+          district,
+          state,
+          pinCode,
+          contactNumber,
+          latitude,
+          longitude,
+          geoRadius,
+        } = req.body;
+
         const school = await createSchoolService({
-            name,
-            address,
-            latitude,
-            longitude,
-            geoRadius
+          name,
+          address,
+          district,
+          state,
+          pinCode,
+          contactNumber,
+          latitude,
+          longitude,
+          geoRadius,
         });
 
         return res.json(school);

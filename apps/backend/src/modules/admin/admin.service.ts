@@ -3,15 +3,19 @@ import bcrypt from "bcrypt";
 import { generateUserCode } from "../../common/utils/UserCodes";
 import { Role } from "@prisma/client";
 
-export const createSchoolService = async(data:{name: string;
+export const createSchoolService = async (data: {
+  name: string;
   address: string;
+  district?: string;
+  state?: string;
+  pinCode?: string;
+  contactNumber?: string;
   latitude: number;
   longitude: number;
   geoRadius: number;
-})=>{
-    const school = await prisma.school.create({data});
-    return school;
-}
+}) => {
+  return prisma.school.create({ data });
+};
 
 
 export const createStandardService= async(data: {name:string; schoolId:string;})=>{
