@@ -44,13 +44,23 @@ model School {
   id        String   @id @default(uuid())
   name      String
   address   String
+
+  district  String?
+  state     String?
+  pinCode   String?
+
+  contactNumber String?
+
   latitude  Float
   longitude Float
   geoRadius Float
 
+  isActive  Boolean  @default(true)
+
   standards Standard[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Standard {
