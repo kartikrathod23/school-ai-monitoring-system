@@ -28,7 +28,11 @@ export const createSchool = async (req:Request, res:Response)=>{
           geoRadius,
         });
 
-        return res.json(school);
+        return res.status(201).json({
+          success: true,
+          message: "School created",
+          data: school,
+        });;
     }
     catch(error:any){
         res.status(400).json({message: error.message});
@@ -47,23 +51,27 @@ export const getAllSchools = async (req: Request, res: Response) => {
 };
 
 export const createStandard = async(req:Request,res:Response)=>{
-    try{
-        const standard = await createStandardService(req.body);
+    try {
+    const standard = await createStandardService(req.body);
 
-        return res.status(201).json({
-            success:true,
-            message:"Standard created successfully!",
-            data:standard
-        });
+    return res.json({
+      success: true,
+      message: "Standard created",
+      data: standard,
+    });
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      return res.status(400).json({
+        success: false,
+        message: "Standard already exists in this school",
+      });
     }
-    catch(err:any){
-        return res.status(400).json({
-            success:false,
-            message:err.message,
-            errors: err.errors || null,
-            data:null
-        })
-    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
 }
 
 
@@ -128,6 +136,13 @@ export const createSection = async (req: Request, res: Response) => {
       data: section,
     });
   } catch (error: any) {
+    
+    if (error.code === "P2002") {
+      return res.status(400).json({
+        success: false,
+        message: "Section already exists in this standard",
+      });
+    }
     return res.status(400).json({
       success: false,
       message: error.message,

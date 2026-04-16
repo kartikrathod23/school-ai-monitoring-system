@@ -33,8 +33,12 @@ export default function SchoolsPage() {
 
   const fetchSchools = async () => {
     try {
-      const data = await getSchools();
-      setSchools(data.data || data); // handle both formats
+      const res = await getSchools();
+
+      setSchools(
+        Array.isArray(res) ? res : res.data || []
+      );
+      
     } catch (err) {
       console.error("Error fetching schools", err);
     }
@@ -149,9 +153,8 @@ export default function SchoolsPage() {
         geoRadius: parseFloat(form.geoRadius),
       });
 
-      const updatedSchool = res.data; // VERY IMPORTANT
+      const updatedSchool = res.data;
 
-      // 🔥 THIS IS THE FIX
       setSchools((prev) =>
         prev.map((s) =>
           s.id === updatedSchool.id ? updatedSchool : s
