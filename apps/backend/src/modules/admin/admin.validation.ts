@@ -31,3 +31,12 @@ export const createSchoolSchema = z.object({
   longitude: z.number(),
   geoRadius: z.number().positive(),
 });
+
+
+export const createSectionSchema = z.object({
+  name: z
+    .string()
+    .length(1, "Section must be a single character")
+    .regex(/^[A-Z]$/, "Section must be a capital letter A–Z"),
+  standardId: z.string(),
+});

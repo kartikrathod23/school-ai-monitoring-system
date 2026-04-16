@@ -25,7 +25,7 @@ type Section = {
 
 type Standard = {
   id: string;
-  name: string;
+  value: number;
   sections?: Section[];
 };
 
@@ -50,7 +50,6 @@ export default function StandardsPage() {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<any>(null);
 
   const showToast = (type: "success" | "error", message: string) => {
@@ -87,50 +86,78 @@ export default function StandardsPage() {
     if (!standardForm.schoolId || !standardForm.name.trim())
       return showToast("error", "Fill all fields");
 
-    await createStandardApi(standardForm);
-
-    showToast("success", "Standard created");
-
-    setStandardForm({ name: "", schoolId: standardForm.schoolId });
-    fetchStandards(standardForm.schoolId);
+    try {
+      await createStandardApi(standardForm);
+      showToast("success", "Standard created");
+      setStandardForm({ name: "", schoolId: standardForm.schoolId });
+      fetchStandards(standardForm.schoolId);
+    } catch (err: any) {
+      showToast(
+        "error",
+        err.response?.data?.message || "Error creating standard"
+      );
+    }
   };
 
   const handleCreateSection = async () => {
     if (!sectionForm.standardId || !sectionForm.name.trim())
       return showToast("error", "Fill all fields");
 
-    await createSectionApi({
-      standardId: sectionForm.standardId,
-      name: sectionForm.name,
-    });
+    try {
+      await createSectionApi({
+        standardId: sectionForm.standardId,
+        name: sectionForm.name,
+      });
 
-    showToast("success", "Section created");
-
-    setSectionForm({ ...sectionForm, name: "" });
-    fetchStandards(sectionForm.schoolId);
+      showToast("success", "Section created");
+      setSectionForm({ ...sectionForm, name: "" });
+      fetchStandards(sectionForm.schoolId);
+    } catch (err: any) {
+      showToast(
+        "error",
+        err.response?.data?.message || "Error creating section"
+      );
+    }
   };
 
   const handleUpdateStandard = async (id: string) => {
-    await updateStandardApi(id, editValue);
-    setEditingStandardId(null);
-    fetchStandards(selectedSchoolId);
+    try {
+      await updateStandardApi(id, editValue);
+      showToast("success", "Standard updated");
+      setEditingStandardId(null);
+      fetchStandards(selectedSchoolId);
+    } catch (err: any) {
+      showToast("error", err.response?.data?.message || "Update failed");
+    }
   };
 
   const handleDeleteStandard = async (id: string) => {
     if (!confirm("Delete standard?")) return;
-    await deleteStandardApi(id);
-    fetchStandards(selectedSchoolId);
+
+    try {
+      await deleteStandardApi(id);
+      showToast("success", "Standard deleted");
+      fetchStandards(selectedSchoolId);
+    } catch (err: any) {
+      showToast("error", err.response?.data?.message || "Delete failed");
+    }
   };
 
   const handleUpdateSection = async (id: string) => {
-    await updateSectionApi(id, editValue);
-    setEditingSectionId(null);
-    fetchStandards(selectedSchoolId);
+    try {
+      await updateSectionApi(id, editValue);
+      showToast("success", "Section updated");
+      setEditingSectionId(null);
+      fetchStandards(selectedSchoolId);
+    } catch (err: any) {
+      showToast("error", err.response?.data?.message || "Update failed");
+    }
   };
 
   const handleDeleteSection = async (id: string) => {
     if (!confirm("Delete section?")) return;
     await deleteSectionApi(id);
+    showToast("success", "Section deleted");
     fetchStandards(selectedSchoolId);
   };
 
@@ -143,7 +170,7 @@ export default function StandardsPage() {
       {toast && (
         <div className="fixed top-5 right-5 z-50">
           <div
-            className={`px-4 py-3 rounded-lg shadow-lg text-sm text-white transition-all duration-300 ${
+            className={`px-4 py-3 rounded-lg shadow-lg text-sm text-white ${
               toast.type === "success" ? "bg-green-500" : "bg-red-500"
             }`}
           >
@@ -174,11 +201,14 @@ export default function StandardsPage() {
           </select>
 
           <input
-            placeholder="Standard Name"
+            placeholder="Standard (1-12)"
             value={standardForm.name}
-            onChange={(e) =>
-              setStandardForm({ ...standardForm, name: e.target.value })
-            }
+            onChange={(e) => {
+              const val = e.target.value;
+              if (/^\d*$/.test(val)) {
+                setStandardForm({ ...standardForm, name: val });
+              }
+            }}
             className="border p-2 rounded"
           />
 
@@ -223,7 +253,7 @@ export default function StandardsPage() {
             <option value="">Select Standard</option>
             {sectionStandards.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name}
+                {`Standard ${s.value}`}
               </option>
             ))}
           </select>
@@ -231,9 +261,12 @@ export default function StandardsPage() {
           <input
             placeholder="Section (A,B,C)"
             value={sectionForm.name}
-            onChange={(e) =>
-              setSectionForm({ ...sectionForm, name: e.target.value })
-            }
+            onChange={(e) => {
+              const val = e.target.value.toUpperCase();
+              if (/^[A-Z]?$/.test(val)) {
+                setSectionForm({ ...sectionForm, name: val });
+              }
+            }}
             className="border p-2 rounded"
           />
 
@@ -259,11 +292,14 @@ export default function StandardsPage() {
                 {editingStandardId === standard.id ? (
                   <input
                     value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^\d*$/.test(val)) setEditValue(val);
+                    }}
                     className="border px-1"
                   />
                 ) : (
-                  <h3>{standard.name}</h3>
+                  <h3>{`Standard ${standard.value}`}</h3>
                 )}
 
                 <div className="flex gap-2">
@@ -271,7 +307,7 @@ export default function StandardsPage() {
                     size={14}
                     onClick={() => {
                       setEditingStandardId(standard.id);
-                      setEditValue(standard.name);
+                      setEditValue(String(standard.value));
                     }}
                   />
 
@@ -295,7 +331,10 @@ export default function StandardsPage() {
                     {editingSectionId === sec.id ? (
                       <input
                         value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          if (/^[A-Z]*$/.test(val)) setEditValue(val);
+                        }}
                         className="border px-1 text-xs"
                       />
                     ) : (

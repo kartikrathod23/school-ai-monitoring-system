@@ -29,9 +29,15 @@ export const createStandardService= async(data: {name:string; schoolId:string;})
         throw new Error("School Not Found");
     }
 
+    const num = Number(data.name);
+
+    if (isNaN(num)) {
+      throw new Error("Standard must be a number");
+    }
+
     const standard = await prisma.standard.create({
         data:{
-            name:data.name,
+            value: num,
             schoolId: data.schoolId,
         },
     });
@@ -76,7 +82,7 @@ export const createSectionService = async (data: {
 export const updateStandardService = async (id: string, name: string) => {
   return prisma.standard.update({
     where: { id },
-    data: { name },
+    data: { value: Number(name) }
   });
 };
 

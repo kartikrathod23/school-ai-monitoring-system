@@ -3,7 +3,7 @@ import { createSchool,createStandard ,createSection,getSchools,getStandards,crea
 import { authenticate } from "../../common/middlewares/auth.middleware";
 import { authorise } from "../../common/middlewares/role.guard";
 import { validate } from "../../common/middlewares/validate.middleware";
-import { createTeacherSchema, createStudentSchema, createSchoolSchema } from "./admin.validation";
+import { createTeacherSchema, createStudentSchema, createSchoolSchema,createSectionSchema } from "./admin.validation";
 
 const router=Router();
 
@@ -11,7 +11,7 @@ router.post('/schools',authenticate,authorise(["ADMIN"]),validate(createSchoolSc
 router.get("/schools-list",authenticate,authorise(["ADMIN"]),getAllSchools);
 router.post('/standards', authenticate,authorise(["ADMIN"]),createStandard);
 router.get("/standards/:standardId/sections",authenticate,authorise(["ADMIN"]),getSectionsByStandard);
-router.post("/sections", authenticate, authorise(["ADMIN"]), createSection);
+router.post("/sections", authenticate, authorise(["ADMIN"]), validate(createSectionSchema), createSection);
 
 router.put("/standards/:id", authenticate, authorise(["ADMIN"]), updateStandard);
 router.delete("/standards/:id", authenticate, authorise(["ADMIN"]), deleteStandard);
