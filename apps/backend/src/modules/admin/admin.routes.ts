@@ -6,7 +6,7 @@ import { validate } from "../../common/middlewares/validate.middleware";
 import { createTeacherSchema, createStudentSchema, createSchoolSchema,createSectionSchema } from "./admin.validation";
 
 const router=Router();
-
+    
 router.post('/schools',authenticate,authorise(["ADMIN"]),validate(createSchoolSchema),createSchool);
 router.get("/schools-list",authenticate,authorise(["ADMIN"]),getAllSchools);
 router.post('/standards', authenticate,authorise(["ADMIN"]),createStandard);

@@ -3,6 +3,11 @@ import bcrypt from "bcrypt";
 import { generateUserCode } from "../../common/utils/UserCodes";
 import { Role } from "@prisma/client";
 
+const hashPassword = async (password: string) => {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+};
+
 export const createSchoolService = async (data: {
   name: string;
   address: string;
@@ -275,7 +280,15 @@ export const getTeachersService = async (query: {
         user: true,
         sections: {
           include: {
-            section: true,
+            section: {
+              include: {
+                standard: {
+                  include: {
+                    school: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -314,57 +327,40 @@ export const getTeacherById = async (id: string) => {
 };
 
 
-export const updateTeacherService = async (
-  id: string,
-  data: {
-    firstName?: string;
-    lastName?: string;
-    sectionIds?: string[];
-  }
-) => {
+export const updateTeacherService = async (id: string, data: any) => {
   const teacher = await prisma.teacher.findUnique({
     where: { id },
   });
 
   if (!teacher) throw new Error("Teacher not found");
 
-  // Validate sections
-  if (data.sectionIds) {
-    const sections = await prisma.section.findMany({
-      where: { id: { in: data.sectionIds } },
-    });
-
-    if (sections.length !== data.sectionIds.length) {
-      throw new Error("Invalid section(s)");
-    }
-  }
-
-  //Update
-  const updated = await prisma.teacher.update({
-    where: { id },
+  // update user fields
+  await prisma.user.update({
+    where: { id: teacher.userId },
     data: {
-      user: {
-        update: {
-          firstName: data.firstName,
-          lastName: data.lastName,
-        },
-      },
-      sections: data.sectionIds
-        ? {
-            deleteMany: {}, // remove old
-            create: data.sectionIds.map((sectionId) => ({
-              sectionId,
-            })),
-          }
-        : undefined,
-    },
-    include: {
-      user: true,
-      sections: true,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      mobileNumber: data.mobileNumber,
+      ...(data.password && {
+        passwordHash: await hashPassword(data.password),
+      }),
     },
   });
 
-  return updated;
+  // delete old sections
+  await prisma.teacherSection.deleteMany({
+    where: { teacherId: id },
+  });
+
+  // add new sections
+  await prisma.teacherSection.createMany({
+    data: data.sectionIds.map((sectionId: string) => ({
+      teacherId: id,
+      sectionId,
+    })),
+  });
+
+  return { success: true };
 };
 
 
@@ -375,8 +371,17 @@ export const deleteTeacherService = async (id: string) => {
 
   if (!teacher) throw new Error("Teacher not found");
 
+
+  await prisma.teacherSection.deleteMany({
+    where: { teacherId: id },
+  });
+
   await prisma.teacher.delete({
     where: { id },
+  });
+
+  await prisma.user.delete({
+    where: { id: teacher.userId },
   });
 
   return true;

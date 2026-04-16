@@ -318,13 +318,24 @@ export const getTeacher = async(req:Request, res:Response)=>{
 }
 
 export const updateTeacher = async (req: Request, res: Response) => {
-  const updated = await updateTeacherService(req.params.id as string, req.body);
+  try {
+    const updated = await updateTeacherService(
+      req.params.id as string,
+      req.body
+    );
 
-  return res.status(200).json({
-    success: true,
-    message: "Teacher updated successfully",
-    data: updated,
-  });
+    return res.status(200).json({
+      success: true,
+      message: "Teacher updated successfully",
+      data: updated,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Failed to update teacher",
+      data: null,
+    });
+  }
 };
 
 export const deleteTeacher = async (req: Request, res: Response) => {
