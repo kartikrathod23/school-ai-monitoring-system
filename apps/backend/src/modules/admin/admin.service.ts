@@ -195,7 +195,7 @@ export const createTeacherService = async (data: {
   sectionIds: string[];
 }) => {
 
-  const existingUser = await prisma.user.findUnique({
+  const existingUser = await prisma.user.findFirst({
     where: { mobileNumber: data.mobileNumber },
   });
 
@@ -494,8 +494,16 @@ export const getStudentsService = async (query: {
       take: limit,
       include: {
         user: true,
-        section: true,
-      },
+        section: {
+          include: {
+            standard: {
+              include: {
+                school: true,
+              },
+            },
+          },
+        },
+      }
     }),
     prisma.student.count({ where: whereCondition }),
   ]);
@@ -527,61 +535,43 @@ export const getStudentById = async (id: string) => {
 };
 
 
-export const updateStudentService = async (
-  id: string,
-  data: {
-    firstName?: string;
-    lastName?: string;
-    sectionId?: string;
-    rollNumber?: number;
-    faceStatus?: "NOT_ADDED" | "ADDED" | "RESCAN";
-  }
-) => {
-
-  const student = await prisma.student.findUnique({
-    where: { id },
-    include: { user: true },
-  });
-
-  if (!student) throw new Error("Student not found");
-
-  if (data.sectionId) {
-    const section = await prisma.section.findUnique({
-      where: { id: data.sectionId },
-    });
-    if (!section) throw new Error("Section not found");
-  }
-
-  if (data.rollNumber) {
-    const existing = await prisma.student.findFirst({
-      where: {
-        sectionId: data.sectionId || student.sectionId,
-        rollNumber: data.rollNumber,
-        NOT: { id },
-      },
-    });
-
-    if (existing) {
-      throw new Error("Roll number already exists in this section");
-    }
-  }
-
+export const updateStudentService = async (id: string, data: any) => {
   const updated = await prisma.student.update({
     where: { id },
+
     data: {
-      sectionId: data.sectionId,
-      rollNumber: data.rollNumber,
-      faceStatus: data.faceStatus,
+      ...(data.rollNumber !== undefined && { rollNumber: data.rollNumber }),
+
+      ...(data.sectionId && {
+        section: {
+          connect: { id: data.sectionId },
+        },
+      }),
+
       user: {
         update: {
-          firstName: data.firstName,
-          lastName: data.lastName,
+          ...(data.firstName && { firstName: data.firstName }),
+          ...(data.lastName && { lastName: data.lastName }),
+          ...(data.mobileNumber && { mobileNumber: data.mobileNumber }),
+
+          ...(data.password && {
+            passwordHash: await bcrypt.hash(data.password, 10),
+          }),
         },
       },
     },
+
     include: {
       user: true,
-      section: true,
+      section: {
+        include: {
+          standard: {
+            include: {
+              school: true,
+            },
+          },
+        },
+      },
     },
   });
 
