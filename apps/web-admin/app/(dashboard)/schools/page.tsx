@@ -165,6 +165,21 @@ export default function SchoolsPage() {
       setTimeout(() => setToast(null), 2500);
 
       setEditModal(false);
+
+      setSelectedSchool(null);
+
+      setForm({
+        name: "",
+        address: "",
+        district: "",
+        state: "",
+        pinCode: "",
+        contactNumber: "",
+        latitude: "",
+        longitude: "",
+        geoRadius: "",
+      });
+
     } catch (err: any) {
       setToast({
         type: "error",

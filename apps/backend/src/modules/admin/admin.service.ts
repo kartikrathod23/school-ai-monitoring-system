@@ -397,6 +397,8 @@ export const createStudentService = async (data: {
   password: string;
   sectionId: string;
   rollNumber: number;
+  dateOfBirth: string;
+  profileImage?: string | null;
 }) => {
 
   const section = await prisma.section.findUnique({
@@ -410,7 +412,7 @@ export const createStudentService = async (data: {
   const existingStudent = await prisma.student.findFirst({
     where: {
       sectionId: data.sectionId,
-      rollNumber: data.rollNumber,
+      rollNumber: Number(data.rollNumber),
     },
   });
 
@@ -425,6 +427,7 @@ export const createStudentService = async (data: {
   const userCode = generateUserCode("STUDENT", count);
 
   const hashedPassword = await bcrypt.hash(data.password, 10);
+  
 
   const student = await prisma.student.create({
     data: {
@@ -437,15 +440,22 @@ export const createStudentService = async (data: {
           mobileNumber: data.mobileNumber,
           passwordHash: hashedPassword,
           status: "ACTIVE",
+        },  
+      },
+
+      section: {
+        connect: {
+          id: data.sectionId,
         },
       },
-      section:{
-        connect:{
-          id: data.sectionId
-        }
-      },
-      rollNumber: data.rollNumber,
+
+      rollNumber: Number(data.rollNumber),
+
+      dateOfBirth: new Date(data.dateOfBirth),
+
+      profileImage: data.profileImage,
     },
+
     include: {
       user: true,
       section: true,
@@ -540,12 +550,20 @@ export const updateStudentService = async (id: string, data: any) => {
     where: { id },
 
     data: {
-      ...(data.rollNumber !== undefined && { rollNumber: data.rollNumber }),
+      ...(data.rollNumber !== undefined && {rollNumber: Number(data.rollNumber), }),
 
       ...(data.sectionId && {
         section: {
           connect: { id: data.sectionId },
         },
+      }),
+
+      ...(data.dateOfBirth && {
+        dateOfBirth: new Date(data.dateOfBirth),
+      }),
+
+      ...(data.profileImage && {
+        profileImage: data.profileImage,
       }),
 
       user: {

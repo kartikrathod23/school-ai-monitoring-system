@@ -4,6 +4,7 @@ import { authenticate } from "../../common/middlewares/auth.middleware";
 import { authorise } from "../../common/middlewares/role.guard";
 import { validate } from "../../common/middlewares/validate.middleware";
 import { createTeacherSchema, createStudentSchema, createSchoolSchema,createSectionSchema } from "./admin.validation";
+import { uploadStudentImage } from "../../common/middlewares/upload.middleware";
 
 const router=Router();
     
@@ -25,7 +26,15 @@ router.put("/schools/:id",authenticate,authorise(["ADMIN"]),updateSchool);
 router.delete("/schools/:id",authenticate,authorise(["ADMIN"]),deleteSchool);
 
 router.post("/teachers", authenticate, authorise(["ADMIN"]),validate(createTeacherSchema),createTeacher);
-router.post("/students",authenticate, authorise(["ADMIN"]),validate(createStudentSchema),createStudent);
+// router.post("/students",authenticate, authorise(["ADMIN"]),validate(createStudentSchema),createStudent);
+router.post(
+  "/students",
+  authenticate,
+  authorise(["ADMIN"]),
+  uploadStudentImage.single("profileImage"),
+  validate(createStudentSchema),
+  createStudent
+);
 
 router.get("/teachers",authenticate,authorise(["ADMIN"]),getTeachers);
 router.get("/students", authenticate, authorise(["ADMIN"]), getStudents);
@@ -33,7 +42,15 @@ router.get("/teachers/:id", authenticate, authorise(["ADMIN"]), getTeacher);
 router.get("/students/:id", authenticate, authorise(["ADMIN"]),getStudent);
 
 
-router.put("/students/:id",authenticate,authorise(["ADMIN"]),updateStudent);
+// router.put("/students/:id",authenticate,authorise(["ADMIN"]),updateStudent);
+router.put(
+  "/students/:id",
+  authenticate,
+  authorise(["ADMIN"]),
+  uploadStudentImage.single("profileImage"),
+  updateStudent
+);
+
 router.put("/teachers/:id",authenticate,authorise(["ADMIN"]),updateTeacher);
 
 // DELETE

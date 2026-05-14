@@ -6,9 +6,11 @@ import Card from "@/components/ui/Card";
 import StatusCard from "@/components/ui/StatusCard";
 import { School, Layers, Users, UserPlus, ScanFace } from "lucide-react";
 import { Plus, GraduationCap, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
     const [stats, setStats] = useState<any>(null);
+    const router = useRouter();
 
     const steps = [
         { title: "School Registration", icon: School, color: "blue" },
@@ -84,24 +86,35 @@ export default function DashboardPage() {
             {/* 5. QUICK ACTIONS */}
             <div className="grid grid-cols-2 gap-4">
 
-                <button className="flex items-center gap-2 border p-3 rounded-lg text-base hover:bg-gray-50">
+                <button
+                    onClick={() => router.push("/schools")}
+                    className="flex items-center gap-2 border p-3 rounded-lg text-base hover:bg-gray-50"
+                >
                     <Plus size={16} /> Add New School
                 </button>
 
-                <button className="flex items-center gap-2 border p-3 rounded-lg text-base hover:bg-gray-50">
+                <button
+                    onClick={() => router.push("/teachers")}
+                    className="flex items-center gap-2 border p-3 rounded-lg text-base hover:bg-gray-50"
+                >
                     <UserPlus size={16} /> Register Teacher
                 </button>
 
-                <button className="flex items-center gap-2 border p-3 rounded-lg text-base hover:bg-gray-50">
+                <button
+                    onClick={() => router.push("/students")}
+                    className="flex items-center gap-2 border p-3 rounded-lg text-base hover:bg-gray-50"
+                >
                     <GraduationCap size={16} /> Register Student
                 </button>
 
-                <button className="flex items-center gap-2 border p-3 rounded-lg text-base hover:bg-gray-50">
+                <button
+                    onClick={() => router.push("/face-status")}
+                    className="flex items-center gap-2 border p-3 rounded-lg text-base hover:bg-gray-50"
+                >
                     <Eye size={16} /> View Face Scan Status
                 </button>
 
             </div>
-
 
         </div>
     );

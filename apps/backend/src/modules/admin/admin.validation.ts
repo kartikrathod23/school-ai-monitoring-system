@@ -14,7 +14,8 @@ export const createStudentSchema = z.object({
   mobileNumber: z.string().min(10).max(10),
   password: z.string().min(6),
   sectionId: z.string(),
-  rollNumber: z.number().int().positive(),
+  rollNumber: z.coerce.number().int().positive(),
+  dateOfBirth: z.string(),
 });
 
 

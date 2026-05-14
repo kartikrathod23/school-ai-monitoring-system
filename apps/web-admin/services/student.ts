@@ -1,8 +1,13 @@
 import api from "./api";
 
 // CREATE
-export const createStudent = async (data: any) => {
-  const res = await api.post("/admin/students", data);
+export const createStudent = async (data: FormData) => {
+  const res = await api.post("/admin/students", data, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
   return res.data;
 };
 
@@ -19,8 +24,21 @@ export const getStudent = async (id: string) => {
 };
 
 // UPDATE
-export const updateStudent = async (id: string, data: any) => {
-  const res = await api.put(`/admin/students/${id}`, data);
+export const updateStudent = async (
+  id: string,
+  data: FormData
+) => {
+
+  const res = await api.put(
+    `/admin/students/${id}`,
+    data,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
   return res.data;
 };
 

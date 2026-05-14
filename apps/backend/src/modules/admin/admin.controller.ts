@@ -352,7 +352,14 @@ export const deleteTeacher = async (req: Request, res: Response) => {
 
 export const createStudent = async (req: Request, res: Response) => {
   try {
-    const student = await createStudentService(req.body);
+    // const student = await createStudentService(req.body);
+    const student = await createStudentService({
+      ...req.body,
+
+      profileImage: req.file
+        ? `/uploads/students/${req.file.filename}`
+        : null,
+    });
 
     return res.status(201).json({
       success: true,
@@ -396,8 +403,21 @@ export const getStudent = async (req: Request, res: Response) => {
   });
 };
 
-export const updateStudent = async (req: Request, res: Response) => {
-  const updated = await updateStudentService(req.params.id as string, req.body);
+export const updateStudent = async (
+  req: Request,
+  res: Response
+) => {
+
+  const updated = await updateStudentService(
+    req.params.id as string,
+    {
+      ...req.body,
+
+      profileImage: req.file
+        ? `/uploads/students/${req.file.filename}`
+        : undefined,
+    }
+  );
 
   return res.status(200).json({
     success: true,

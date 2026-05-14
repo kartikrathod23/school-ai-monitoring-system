@@ -41,6 +41,8 @@ export default function StudentsPage() {
     mobileNumber: "",
     password: "",
     rollNumber: "",
+    dateOfBirth: "",
+    profileImage: null as File | null,
   });
 
   const [toast, setToast] = useState<any>(null);
@@ -81,11 +83,31 @@ export default function StudentsPage() {
         return showToast("error", "Select section");
       }
 
-      const payload = {
-        ...form,
-        rollNumber: Number(form.rollNumber),
-        sectionId: selectedSection,
-      };
+      const payload = new FormData();
+
+      payload.append("firstName", form.firstName);
+
+      payload.append("lastName", form.lastName);
+
+      payload.append("mobileNumber", form.mobileNumber);
+
+      payload.append("password", form.password);
+
+      payload.append(
+        "rollNumber",
+        String(Number(form.rollNumber))
+      );
+
+      payload.append("sectionId", selectedSection);
+
+      payload.append("dateOfBirth", form.dateOfBirth);
+
+      if (form.profileImage) {
+        payload.append(
+          "profileImage",
+          form.profileImage
+        );
+      }
 
       if (editId) {
         await updateStudent(editId, payload);
@@ -101,6 +123,8 @@ export default function StudentsPage() {
         mobileNumber: "",
         password: "",
         rollNumber: "",
+        dateOfBirth: "",
+        profileImage: null as File | null,
       })
       
       loadStudents();
@@ -115,11 +139,17 @@ export default function StudentsPage() {
     setEditId(s.id);
 
     setForm({
-        firstName: s.user.firstName,
-        lastName: s.user.lastName,
-        mobileNumber: s.user.mobileNumber,
-        password: "",
-        rollNumber: s.rollNumber,
+      firstName: s.user.firstName,
+      lastName: s.user.lastName,
+      mobileNumber: s.user.mobileNumber,
+      password: "",
+      rollNumber: s.rollNumber,
+
+      dateOfBirth: s.dateOfBirth
+        ? s.dateOfBirth.split("T")[0]
+        : "",
+
+      profileImage: null,
     });
 
 
@@ -211,6 +241,39 @@ export default function StudentsPage() {
           </div>
 
           <div>
+            <label className="label">Date Of Birth</label>
+
+            <input
+              type="date"
+              className="input"
+              value={form.dateOfBirth}
+              onChange={(e)=>
+                setForm({
+                  ...form,
+                  dateOfBirth:e.target.value
+                })
+              }
+            />
+          </div>
+
+          <div>
+            <label className="label">Student Photo</label>
+
+            <input
+              type="file"
+              accept="image/*"
+              className="input"
+
+              onChange={(e)=>
+                setForm({
+                  ...form,
+                  profileImage: e.target.files?.[0] || null
+                })
+              }
+            />
+          </div>
+
+          <div>
             <label className="label">Roll Number</label>
             <input className="input"
               value={form.rollNumber}
@@ -295,6 +358,7 @@ export default function StudentsPage() {
             <th className="py-3 px-2">Name</th>
             <th className="py-3 px-2">Code</th>
             <th className="py-3 px-2">Mobile</th>
+            <th className="py-3 px-2">Photo</th>
             <th className="py-3 px-2">School</th>
             <th className="py-3 px-2">Std</th>
             <th className="py-3 px-2">Section</th>
@@ -313,6 +377,17 @@ export default function StudentsPage() {
 
                 <td className="px-2">{s.user.userCode}</td>
                 <td className="px-2">{s.user.mobileNumber}</td>
+
+                <td className="px-2">
+                  {s.profileImage ? (
+                    <img
+                      src={`http://localhost:5000${s.profileImage}`}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    "-"
+                  )}
+                </td>
 
                 <td className="px-2">
                 {s.section?.standard?.school?.name || "-"}
@@ -430,6 +505,41 @@ export default function StudentsPage() {
                 onChange={(e)=>setForm({...form,password:e.target.value})}
                 placeholder="Password"/>
 
+                {/* DOB */}
+                <div>
+                  <label className="label">Date Of Birth</label>
+
+                  <input
+                    type="date"
+                    className="input"
+                    value={form.dateOfBirth}
+                    onChange={(e)=>
+                      setForm({
+                        ...form,
+                        dateOfBirth: e.target.value
+                      })
+                    }
+                  />
+                </div>
+
+                {/* PHOTO */}
+                <div>
+                  <label className="label">Student Photo</label>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="input"
+
+                    onChange={(e)=>
+                      setForm({
+                        ...form,
+                        profileImage: e.target.files?.[0] || null
+                      })
+                    }
+                  />
+                </div>
+
                 <input className="input"
                 value={form.rollNumber}
                 onChange={(e)=>setForm({...form,rollNumber:e.target.value})}
@@ -493,11 +603,36 @@ export default function StudentsPage() {
                 <button
                 onClick={async ()=>{
                     try {
-                    await updateStudent(editId!, {
-                        ...form,
-                        rollNumber: Number(form.rollNumber),
-                        sectionId: editSection,
-                    });
+                    const payload = new FormData();
+
+                    payload.append("firstName", form.firstName);
+                    payload.append("lastName", form.lastName);
+                    payload.append("mobileNumber", form.mobileNumber);
+
+                    if (form.password) {
+                      payload.append("password", form.password);
+                    }
+
+                    payload.append(
+                      "rollNumber",
+                      String(Number(form.rollNumber))
+                    );
+
+                    payload.append("sectionId", editSection);
+
+                    payload.append(
+                      "dateOfBirth",
+                      form.dateOfBirth
+                    );
+
+                    if (form.profileImage) {
+                      payload.append(
+                        "profileImage",
+                        form.profileImage
+                      );
+                    }
+
+                    await updateStudent(editId!, payload);
 
                     showToast("success","Updated");
                     setEditModalOpen(false);
