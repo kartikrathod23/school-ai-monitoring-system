@@ -8,9 +8,7 @@ dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const loginUser=async(identifier:string, password:string)=>{
-
     console.log("Before DB query");
-
 
     const user = await prisma.user.findFirst({
         where:{
@@ -26,7 +24,6 @@ export const loginUser=async(identifier:string, password:string)=>{
     }
 
     console.log("After DB query");
-
     console.log("Before bcrypt");
 
 
