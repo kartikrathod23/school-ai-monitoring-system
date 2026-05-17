@@ -1,4 +1,5 @@
 import { Request,Response } from "express";
+import { createStudentSchema } from "./admin.validation";
 import { createSchoolService, createStandardService,createSectionService,getSchoolsService, getStandardsBySchool,createTeacherService, createStudentService, getTeachersService, getStudentsService, getTeacherById, getStudentById,updateStudentService,updateTeacherService,deleteStudentService,deleteTeacherService, getAllSchoolsService, getSectionsByStandardService,getDashboardStatsService,updateFaceStatusService,deleteSchoolService,updateSchoolService,deleteSectionService,deleteStandardService,updateSectionService,updateStandardService} from "./admin.service";
 
 
@@ -353,12 +354,15 @@ export const deleteTeacher = async (req: Request, res: Response) => {
 export const createStudent = async (req: Request, res: Response) => {
   try {
     // const student = await createStudentService(req.body);
-    const student = await createStudentService({
+    const parsed = createStudentSchema.parse({
       ...req.body,
+      rollNumber: Number(req.body.rollNumber),
+    });
 
-      profileImage: req.file
-        ? `/uploads/students/${req.file.filename}`
-        : null,
+    const student = await createStudentService({
+      ...parsed,
+
+      profileImage: req.file ? (req.file as any).path : undefined,
     });
 
     return res.status(201).json({
@@ -403,27 +407,31 @@ export const getStudent = async (req: Request, res: Response) => {
   });
 };
 
-export const updateStudent = async (
-  req: Request,
-  res: Response
-) => {
+export const updateStudent = async (req: Request,res: Response) => {
+  try{
+    const updated = await updateStudentService(
+      req.params.id as string,
+      {
+        ...req.body,
+  
+        rollNumber: Number(req.body.rollNumber),
+  
+        profileImage: req.file ? (req.file as any).path : undefined,
+      }
+    );
+  
+    return res.status(200).json({
+      success: true,
+      message: "Student updated successfully",
+      data: updated,
+    });
+  } catch (error: any) {
 
-  const updated = await updateStudentService(
-    req.params.id as string,
-    {
-      ...req.body,
-
-      profileImage: req.file
-        ? `/uploads/students/${req.file.filename}`
-        : undefined,
-    }
-  );
-
-  return res.status(200).json({
-    success: true,
-    message: "Student updated successfully",
-    data: updated,
-  });
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Update failed",
+    });
+  }
 };
 
 export const deleteStudent = async (req: Request, res: Response) => {

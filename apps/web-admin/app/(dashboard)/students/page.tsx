@@ -84,13 +84,9 @@ export default function StudentsPage() {
       }
 
       const payload = new FormData();
-
       payload.append("firstName", form.firstName);
-
       payload.append("lastName", form.lastName);
-
       payload.append("mobileNumber", form.mobileNumber);
-
       payload.append("password", form.password);
 
       payload.append(
@@ -99,7 +95,6 @@ export default function StudentsPage() {
       );
 
       payload.append("sectionId", selectedSection);
-
       payload.append("dateOfBirth", form.dateOfBirth);
 
       if (form.profileImage) {
@@ -126,6 +121,13 @@ export default function StudentsPage() {
         dateOfBirth: "",
         profileImage: null as File | null,
       })
+
+      setSelectedSchool("");
+      setSelectedStandard("");
+      setSelectedSection("");
+
+      setStandards([]);
+      setSections([]);
       
       loadStudents();
       setEditModalOpen(false);
@@ -381,7 +383,7 @@ export default function StudentsPage() {
                 <td className="px-2">
                   {s.profileImage ? (
                     <img
-                      src={`http://localhost:5000${s.profileImage}`}
+                      src={s.profileImage}
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
@@ -636,6 +638,15 @@ export default function StudentsPage() {
 
                     showToast("success","Updated");
                     setEditModalOpen(false);
+                    setEditSchool("");
+                    setEditStandard("");
+                    setEditSection("");
+
+                    setEditStandards([]);
+                    setEditSections([]);
+
+                    setEditId(null);
+
                     loadStudents();
 
                     } catch (err:any) {

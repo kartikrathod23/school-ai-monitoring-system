@@ -398,7 +398,7 @@ export const createStudentService = async (data: {
   sectionId: string;
   rollNumber: number;
   dateOfBirth: string;
-  profileImage?: string | null;
+  profileImage?: string;
 }) => {
 
   const section = await prisma.section.findUnique({

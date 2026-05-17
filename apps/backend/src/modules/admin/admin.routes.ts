@@ -32,7 +32,7 @@ router.post(
   authenticate,
   authorise(["ADMIN"]),
   uploadStudentImage.single("profileImage"),
-  validate(createStudentSchema),
+  // validate(createStudentSchema),
   createStudent
 );
 

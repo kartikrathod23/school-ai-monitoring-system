@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import authRoutes from "./modules/auth/auth.routes";
 import adminRoutes from './modules/admin/admin.routes';
 import { errorHandler } from './common/middlewares/error.middleware';
-import path from "path";
 
 dotenv.config();
 
@@ -14,10 +13,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use('/api/admin',adminRoutes);
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "../uploads"))
-);
+
 app.use(errorHandler);
 
 

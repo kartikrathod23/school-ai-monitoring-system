@@ -8,9 +8,16 @@ export const errorHandler=(
 ) =>{
     console.log(err);
 
+    if (err.name === "ZodError") {
+
+        return res.status(400).json({
+        message: err.errors[0].message,
+        });
+    }
+
     return res.status(500).json({
         success:false,
-        message:err.message || "Internal Server Error",
+        message:err.errors[0].message || "Internal Server Error",
         data:null,
     })
 }
