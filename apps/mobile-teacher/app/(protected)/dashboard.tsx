@@ -29,17 +29,17 @@ export default function DashboardScreen() {
     let subscription: any;
 
     const initialize = async () => {
-      const teacherData =await fetchDashboard();
-      const school =teacherData?.sections?.[0]?.section?.standard?.school;
+      const teacherData = await fetchDashboard();
+      const school = teacherData?.sections?.[0]?.section?.standard?.school;
 
       if (!school) return;
-      subscription = await startLocationTracking(school.latitude,school.longitude,school.geoRadius,(locationData) => {setLocationStatus(locationData);});
+      subscription = await startLocationTracking(school.latitude, school.longitude, school.geoRadius, (locationData) => { setLocationStatus(locationData); });
     };
 
     initialize();
 
     return () => {
-      if(subscription){
+      if (subscription) {
         subscription.remove();
       }
     };
@@ -47,7 +47,7 @@ export default function DashboardScreen() {
 
   const fetchDashboard = async () => {
     try {
-      const response =await getTeacherProfile();
+      const response = await getTeacherProfile();
       setTeacher(response);
       return response;
     } catch (error) {
@@ -128,7 +128,7 @@ export default function DashboardScreen() {
                 </Text>
 
                 <Text className="mt-1 text-base font-semibold text-[#0F172A]">
-                  {assignedSection?.section?.standard ?.school?.name}
+                  {assignedSection?.section?.standard?.school?.name}
                 </Text>
               </View>
 
@@ -209,12 +209,18 @@ export default function DashboardScreen() {
                     : "text-[#B91C1C]"
                     }`}
                 >
-                  {locationStatus?.isInside
-                    ? "You are inside school premises"
-                    : `You are ${locationStatus?.distance >= 1000
-                      ? `${(locationStatus.distance / 1000).toFixed(2)} km`
-                      : `${Math.round(locationStatus.distance)} m`
-                    } away from school`}
+                  {
+                    locationStatus
+                      ? (
+                        locationStatus.isInside
+                          ? "You are inside school premises"
+                          : `You are ${locationStatus.distance >= 1000
+                            ? `${(locationStatus.distance / 1000).toFixed(2)} km`
+                            : `${Math.round(locationStatus.distance)} m`
+                          } away from school`
+                      )
+                      : "Checking location..."
+                  }
                 </Text>
               </View>
             </View>
