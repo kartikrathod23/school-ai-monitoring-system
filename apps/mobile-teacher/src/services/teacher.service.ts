@@ -1,0 +1,6 @@
+import { api } from "@/src/lib/api";
+
+export const getTeacherProfile = async () => {
+  const response = await api.get("/teacher/me");
+  return response.data.data;
+};

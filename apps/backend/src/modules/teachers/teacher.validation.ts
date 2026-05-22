@@ -15,3 +15,8 @@ export const attendanceRecordUpdateSchema = z.object({
 export const mealSessionStartSchema = z.object({
   sectionId: z.string().uuid("Invalid section id"),
 });
+
+export const verifyLocationSchema = z.object({
+  latitude: z.number(),
+  longitude: z.number(),
+});
