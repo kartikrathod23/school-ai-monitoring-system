@@ -20,6 +20,10 @@ import {
 
 import { getTeacherProfile } from "@/src/services/teacher.service";
 import { startLocationTracking } from "@/src/services/location.service";
+import { TouchableOpacity } from "react-native";
+import { router } from "expo-router";
+
+
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [teacher, setTeacher] = useState<any>(null);
@@ -285,7 +289,13 @@ export default function DashboardScreen() {
             Student Management
           </Text>
 
-          <View className="rounded-2xl border border-[#E9D5FF] bg-[#FAF5FF] p-4">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() =>
+              router.push("/(protected)/face-onboarding")
+            }
+            className="rounded-2xl border border-[#E9D5FF] bg-[#FAF5FF] p-4"
+          >
             <View className="flex-row items-center">
               <View className="h-11 w-11 items-center justify-center rounded-full bg-[#E9D5FF]">
                 <Users
@@ -325,7 +335,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
             View Reports (Read-Only)

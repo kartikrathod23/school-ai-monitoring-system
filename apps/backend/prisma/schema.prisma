@@ -16,6 +16,7 @@ enum Role {
 
 enum FaceStatus {
   NOT_ADDED
+  PENDING
   ADDED
   RESCAN
 }
@@ -43,6 +44,21 @@ enum GeofenceValidationType {
   MEAL_COUNT
 }
 
+enum FaceOnboardingSessionStatus {
+  PENDING
+  IMAGES_CAPTURED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum MlJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id       String @id @default(uuid())
   userCode String @unique
@@ -64,8 +80,9 @@ model User {
 
   attendanceSessions AttendanceSession[] @relation("TeacherAttendanceSessions")
 
-  mealSessions MealSession[] @relation("TeacherMealSessions")
-  geofenceValidations GeofenceValidation[]
+  mealSessions          MealSession[]           @relation("TeacherMealSessions")
+  geofenceValidations   GeofenceValidation[]
+  FaceOnboardingSession FaceOnboardingSession[]
 }
 
 model School {
@@ -85,7 +102,7 @@ model School {
 
   isActive Boolean @default(true)
 
-  standards Standard[]
+  standards           Standard[]
   geofenceValidations GeofenceValidation[]
 
   createdAt DateTime @default(now())
@@ -117,7 +134,8 @@ model Section {
 
   attendanceSessions AttendanceSession[]
 
-  mealSessions MealSession[]
+  mealSessions          MealSession[]
+  FaceOnboardingSession FaceOnboardingSession[]
 
   @@unique([standardId, name])
 }
@@ -143,7 +161,8 @@ model Student {
 
   faceStatus FaceStatus @default(NOT_ADDED)
 
-  createdAt DateTime @default(now())
+  createdAt             DateTime                @default(now())
+  FaceOnboardingSession FaceOnboardingSession[]
 
   @@unique([sectionId, rollNumber])
   @@index([sectionId])
@@ -153,7 +172,12 @@ model StudentFaceImage {
   id String @id @default(uuid())
 
   studentId String
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  onboardingSessionId String?
+
+  onboardingSession FaceOnboardingSession? @relation(fields: [onboardingSessionId], references: [id])
 
   imageUrl String
 
@@ -250,7 +274,6 @@ model MealSession {
   @@unique([sectionId, date])
 }
 
-
 model GeofenceValidation {
   id String @id @default(uuid())
 
@@ -262,7 +285,7 @@ model GeofenceValidation {
 
   referenceId String?
 
-  latitude Float
+  latitude  Float
   longitude Float
 
   distance Float
@@ -270,11 +293,56 @@ model GeofenceValidation {
   isWithinGeofence Boolean
 
   schoolId String
-  school School @relation(fields: [schoolId], references: [id])
+  school   School @relation(fields: [schoolId], references: [id])
 
   validatedAt DateTime @default(now())
 
   @@index([teacherUserId])
   @@index([validationType])
   @@index([referenceId])
+}
+
+model FaceOnboardingSession {
+  id String @id @default(uuid())
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  teacherUserId String
+  teacherUser   User   @relation(fields: [teacherUserId], references: [id])
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  status FaceOnboardingSessionStatus @default(PENDING)
+
+  totalImages Int @default(0)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images StudentFaceImage[]
+
+  mlJobs MlProcessingJob[]
+}
+
+model MlProcessingJob {
+  id String @id @default(uuid())
+
+  onboardingSessionId String
+
+  onboardingSession FaceOnboardingSession @relation(fields: [onboardingSessionId], references: [id])
+
+  status MlJobStatus @default(PENDING)
+
+  jobType String
+
+  responsePayload Json?
+
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
