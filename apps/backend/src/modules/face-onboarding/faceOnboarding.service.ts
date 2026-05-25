@@ -1,6 +1,6 @@
 import prisma from "../../database/prisma";
-
 import { validateGeofence } from "../../common/utils/geofence";
+import { mlQueue } from "../../queues/ml.queue";
 
 export const createFaceOnboardingService = async (
   userId: string,
@@ -75,18 +75,34 @@ export const createFaceOnboardingService = async (
       data: {
         studentId: student.id,
         onboardingSessionId: onboarding.id,
-        imageUrl: `/uploads/face-onboarding/${file.filename}`,
+        imageUrl: `${process.env.BACKEND_BASE_URL}/uploads/face-onboarding/${file.filename}`,
+        fileSize: file.size,
+        mimeType: file.mimetype,
       },
     });
   }
 
-  await prisma.mlProcessingJob.create({
+  const mlJob =await prisma.mlProcessingJob.create({
     data: {
       onboardingSessionId: onboarding.id,
-      jobType: "FACE_EMBEDDING_GENERATION",
+      jobType:"FACE_EMBEDDING_GENERATION",
       status: "PENDING",
     },
   });
+
+  await mlQueue.add( "FACE_EMBEDDING_GENERATION",
+    {
+      mlJobId: mlJob.id,
+      onboardingSessionId: onboarding.id,
+      studentId: student.id,
+    },
+
+    {
+      attempts: 3,
+      removeOnComplete: 50,
+      removeOnFail: false,
+    }
+  );
 
   await prisma.student.update({
     where: {

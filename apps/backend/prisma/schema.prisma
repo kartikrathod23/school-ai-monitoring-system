@@ -59,6 +59,12 @@ enum MlJobStatus {
   FAILED
 }
 
+enum MlJobType {
+  FACE_EMBEDDING_GENERATION
+  ATTENDANCE_PROCESSING
+  MEAL_COUNT_PROCESSING
+}
+
 model User {
   id       String @id @default(uuid())
   userCode String @unique
@@ -161,6 +167,8 @@ model Student {
 
   faceStatus FaceStatus @default(NOT_ADDED)
 
+  faceEmbeddings StudentFaceEmbedding[]
+
   createdAt             DateTime                @default(now())
   FaceOnboardingSession FaceOnboardingSession[]
 
@@ -181,7 +189,27 @@ model StudentFaceImage {
 
   imageUrl String
 
+  fileSize Int?
+
+  mimeType String?
+
   createdAt DateTime @default(now())
+}
+
+model StudentFaceEmbedding {
+  id String @id @default(uuid())
+
+  studentId String
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  embedding Json
+
+  modelVersion String?
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
 }
 
 model Teacher {
@@ -337,11 +365,15 @@ model MlProcessingJob {
 
   status MlJobStatus @default(PENDING)
 
-  jobType String
+  jobType MlJobType
 
   responsePayload Json?
 
   errorMessage String?
+
+  startedAt DateTime?
+
+  completedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
