@@ -1,0 +1,26 @@
+{
+  "name": "ml-worker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.16.1",
+    "bullmq": "^5.66.5",
+    "dotenv": "^17.4.2",
+    "ioredis": "^5.9.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "prisma": "^5.22.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^6.0.3"
+  }
+}

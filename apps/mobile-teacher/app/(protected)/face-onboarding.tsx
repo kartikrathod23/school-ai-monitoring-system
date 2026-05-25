@@ -24,15 +24,8 @@ export default function FaceOnboardingScreen() {
   const loadStudents = async () => {
     try {
       const sectionsResponse = await api.get("/teacher/sections");
-
-      const section =
-        sectionsResponse.data.data[0];
-
-      const studentsResponse =
-        await api.get(
-          `/teacher/sections/${section.sectionId}/students`
-        );
-
+      const section =sectionsResponse.data.data[0];
+      const studentsResponse =await api.get(`/teacher/sections/${section.sectionId}/students`);
       setStudents(studentsResponse.data.data);
     } catch (error) {
       console.log(error);
@@ -43,7 +36,21 @@ export default function FaceOnboardingScreen() {
 
   useEffect(() => {
     loadStudents();
-  }, []);
+
+    const interval = setInterval(() => {
+      const hasPendingStudents =
+        students.some(
+          (student) =>
+            student.faceStatus === "PENDING"
+        );
+
+      if (hasPendingStudents) {
+        loadStudents();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [students]);
 
   const addedCount = useMemo(() => {
     return students.filter(

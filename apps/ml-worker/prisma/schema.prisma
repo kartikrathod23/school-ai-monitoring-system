@@ -1,0 +1,380 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PRINCIPAL
+}
+
+enum FaceStatus {
+  NOT_ADDED
+  PENDING
+  ADDED
+  RESCAN
+}
+
+enum AttendanceSessionStatus {
+  PENDING
+  PROCESSED
+  FINALIZED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  MANUAL
+}
+
+enum MealSessionStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum GeofenceValidationType {
+  ATTENDANCE
+  FACE_ONBOARDING
+  MEAL_COUNT
+}
+
+enum FaceOnboardingSessionStatus {
+  PENDING
+  IMAGES_CAPTURED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum MlJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum MlJobType {
+  FACE_EMBEDDING_GENERATION
+  ATTENDANCE_PROCESSING
+  MEAL_COUNT_PROCESSING
+}
+
+model User {
+  id       String @id @default(uuid())
+  userCode String @unique
+
+  firstName String
+  lastName  String
+
+  role         Role
+  mobileNumber String
+  email        String? @unique
+  passwordHash String
+  status       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student?
+  teacher Teacher?
+
+  attendanceSessions AttendanceSession[] @relation("TeacherAttendanceSessions")
+
+  mealSessions          MealSession[]           @relation("TeacherMealSessions")
+  geofenceValidations   GeofenceValidation[]
+  FaceOnboardingSession FaceOnboardingSession[]
+}
+
+model School {
+  id      String @id @default(uuid())
+  name    String
+  address String
+
+  district String?
+  state    String?
+  pinCode  String?
+
+  contactNumber String?
+
+  latitude  Float
+  longitude Float
+  geoRadius Float
+
+  isActive Boolean @default(true)
+
+  standards           Standard[]
+  geofenceValidations GeofenceValidation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Standard {
+  id    String @id @default(uuid())
+  value Int
+
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolId String
+
+  sections Section[]
+
+  @@unique([schoolId, value])
+}
+
+model Section {
+  id   String @id @default(uuid())
+  name String
+
+  standard   Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  standardId String
+
+  students Student[]
+
+  teachers TeacherSection[]
+
+  attendanceSessions AttendanceSession[]
+
+  mealSessions          MealSession[]
+  FaceOnboardingSession FaceOnboardingSession[]
+
+  @@unique([standardId, name])
+}
+
+model Student {
+  id String @id @default(uuid())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+
+  section   Section @relation(fields: [sectionId], references: [id])
+  sectionId String
+
+  rollNumber Int
+
+  dateOfBirth DateTime?
+
+  profileImage String?
+
+  faceImages StudentFaceImage[]
+
+  attendanceRecords AttendanceRecord[]
+
+  faceStatus FaceStatus @default(NOT_ADDED)
+
+  faceEmbeddings StudentFaceEmbedding[]
+
+  createdAt             DateTime                @default(now())
+  FaceOnboardingSession FaceOnboardingSession[]
+
+  @@unique([sectionId, rollNumber])
+  @@index([sectionId])
+}
+
+model StudentFaceImage {
+  id String @id @default(uuid())
+
+  studentId String
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  onboardingSessionId String?
+
+  onboardingSession FaceOnboardingSession? @relation(fields: [onboardingSessionId], references: [id])
+
+  imageUrl String
+
+  fileSize Int?
+
+  mimeType String?
+
+  createdAt DateTime @default(now())
+}
+
+model StudentFaceEmbedding {
+  id String @id @default(uuid())
+
+  studentId String
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  embedding Json
+
+  modelVersion String?
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
+}
+
+model Teacher {
+  id String @id @default(uuid())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+
+  sections TeacherSection[]
+}
+
+model TeacherSection {
+  id String @id @default(uuid())
+
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+  teacherId String
+
+  section   Section @relation(fields: [sectionId], references: [id])
+  sectionId String
+
+  @@unique([teacherId, sectionId])
+  @@index([teacherId])
+  @@index([sectionId])
+}
+
+model AttendanceSession {
+  id String @id @default(uuid())
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  teacherUserId String
+  teacherUser   User   @relation("TeacherAttendanceSessions", fields: [teacherUserId], references: [id])
+
+  date DateTime
+
+  status AttendanceSessionStatus @default(PENDING)
+
+  confidenceScore Float?
+
+  createdAt DateTime @default(now())
+
+  records AttendanceRecord[]
+
+  @@unique([sectionId, date])
+  @@index([teacherUserId])
+  @@index([sectionId])
+}
+
+model AttendanceRecord {
+  id String @id @default(uuid())
+
+  attendanceSessionId String
+  attendanceSession   AttendanceSession @relation(fields: [attendanceSessionId], references: [id], onDelete: Cascade)
+
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id])
+
+  status AttendanceStatus
+
+  confidenceScore Float?
+
+  isManualOverride Boolean @default(false)
+
+  markedAt DateTime @default(now())
+
+  @@index([attendanceSessionId])
+  @@index([studentId])
+}
+
+model MealSession {
+  id String @id @default(uuid())
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  teacherUserId String
+  teacherUser   User   @relation("TeacherMealSessions", fields: [teacherUserId], references: [id])
+
+  date DateTime
+
+  totalDetected Int
+
+  confidenceScore Float?
+
+  status MealSessionStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  @@unique([sectionId, date])
+}
+
+model GeofenceValidation {
+  id String @id @default(uuid())
+
+  teacherUserId String
+
+  teacherUser User @relation(fields: [teacherUserId], references: [id])
+
+  validationType GeofenceValidationType
+
+  referenceId String?
+
+  latitude  Float
+  longitude Float
+
+  distance Float
+
+  isWithinGeofence Boolean
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  validatedAt DateTime @default(now())
+
+  @@index([teacherUserId])
+  @@index([validationType])
+  @@index([referenceId])
+}
+
+model FaceOnboardingSession {
+  id String @id @default(uuid())
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  teacherUserId String
+  teacherUser   User   @relation(fields: [teacherUserId], references: [id])
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  status FaceOnboardingSessionStatus @default(PENDING)
+
+  totalImages Int @default(0)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images StudentFaceImage[]
+
+  mlJobs MlProcessingJob[]
+}
+
+model MlProcessingJob {
+  id String @id @default(uuid())
+
+  onboardingSessionId String
+
+  onboardingSession FaceOnboardingSession @relation(fields: [onboardingSessionId], references: [id])
+
+  status MlJobStatus @default(PENDING)
+
+  jobType MlJobType
+
+  responsePayload Json?
+
+  errorMessage String?
+
+  startedAt DateTime?
+
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
