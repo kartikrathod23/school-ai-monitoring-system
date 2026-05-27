@@ -2,32 +2,43 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-const uploadPath = "uploads/face-onboarding";
+const createStorage = (folder: string) => {
 
-if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath, { recursive: true });
-}
+  if (!fs.existsSync(folder)) {
+    fs.mkdirSync(folder, {
+      recursive: true,
+    });
+  }
 
-const storage = multer.diskStorage({
-  destination: (_, __, cb) => {
-    cb(null, uploadPath);
+  return multer.diskStorage({
+    destination: (_, __, cb) => {
+      cb(null, folder);
+    },
+
+    filename: (_, file, cb) => {
+      const unique = Date.now() +"-" +Math.round( Math.random() * 1e9);
+      cb(null, unique +path.extname(file.originalname));
+    },
+  });
+};
+
+const commonConfig = {
+  limits: {
+    fileSize:5 * 1024 * 1024,
   },
+};
 
-  filename: (_, file, cb) => {
-    const unique =
-      Date.now() + "-" + Math.round(Math.random() * 1e9);
-
-    cb(
-      null,
-      unique + path.extname(file.originalname)
-    );
-  },
+export const uploadFaceImages =multer({
+  storage: createStorage("uploads/face-onboarding"),
+  ...commonConfig,
 });
 
-export const uploadFaceImages = multer({
-  storage,
+export const uploadAttendanceImages =multer({
+  storage: createStorage("uploads/attendance"),
+  ...commonConfig,
+});
 
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-  },
+export const uploadMealImages =multer({
+  storage: createStorage("uploads/meal"),
+  ...commonConfig,
 });

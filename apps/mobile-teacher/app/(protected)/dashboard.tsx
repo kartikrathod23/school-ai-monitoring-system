@@ -240,7 +240,7 @@ export default function DashboardScreen() {
           </Text>
 
           <View className="gap-y-4">
-            <View className="rounded-2xl bg-[#2563EB] p-4">
+            <TouchableOpacity activeOpacity={0.8} onPress={() =>router.push("/(protected)/attendance-capture") } className="rounded-2xl bg-[#2563EB] p-4">
               <View className="flex-row items-center">
                 <View className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
                   <Camera
@@ -260,9 +260,9 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
 
-            <View className="rounded-2xl bg-[#10B981] p-4">
+            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/(protected)/meal-capture")}className="rounded-2xl bg-[#10B981] p-4">
               <View className="flex-row items-center">
                 <View className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
                   <UtensilsCrossed
@@ -277,12 +277,11 @@ export default function DashboardScreen() {
                   </Text>
 
                   <Text className="mt-1 text-base text-green-100">
-                    Capture photos for student meal
-                    count
+                    Capture photos for student meal count
                   </Text>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
 
           <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">

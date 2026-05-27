@@ -196,6 +196,22 @@ model StudentFaceImage {
   createdAt DateTime @default(now())
 }
 
+model AttendanceImage {
+  id String @id @default(uuid())
+
+  attendanceSessionId String
+
+  attendanceSession AttendanceSession @relation(fields: [attendanceSessionId], references: [id], onDelete: Cascade)
+
+  imageUrl String
+
+  fileSize Int?
+
+  mimeType String?
+
+  createdAt DateTime @default(now())
+}
+
 model StudentFaceEmbedding {
   id String @id @default(uuid())
 
@@ -254,6 +270,9 @@ model AttendanceSession {
 
   records AttendanceRecord[]
 
+  images AttendanceImage[]
+  mlJobs MlProcessingJob[]
+
   @@unique([sectionId, date])
   @@index([teacherUserId])
   @@index([sectionId])
@@ -296,6 +315,8 @@ model MealSession {
   confidenceScore Float?
 
   status MealSessionStatus @default(PENDING)
+
+  mlJobs MlProcessingJob[]
 
   createdAt DateTime @default(now())
 
@@ -359,9 +380,17 @@ model FaceOnboardingSession {
 model MlProcessingJob {
   id String @id @default(uuid())
 
-  onboardingSessionId String
+  onboardingSessionId String?
 
-  onboardingSession FaceOnboardingSession @relation(fields: [onboardingSessionId], references: [id])
+  onboardingSession FaceOnboardingSession? @relation(fields: [onboardingSessionId], references: [id])
+
+  attendanceSessionId String?
+
+  attendanceSession AttendanceSession? @relation(fields: [attendanceSessionId], references: [id])
+
+  mealSessionId String?
+
+  mealSession MealSession? @relation(fields: [mealSessionId], references: [id])
 
   status MlJobStatus @default(PENDING)
 

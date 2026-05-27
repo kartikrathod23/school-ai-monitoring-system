@@ -7,6 +7,7 @@ import teacherRoutes from './modules/teachers/teacher.routes'
 import { errorHandler } from './common/middlewares/error.middleware';
 import path from "path";
 import faceOnboardingRoutes from "./modules/face-onboarding/faceOnboarding.routes";
+import attendanceRoutes from "./modules/attendance/attendance.routes";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use('/api/admin',adminRoutes);
 app.use("/api/teacher",teacherRoutes)
 app.use("/uploads",express.static(path.join(__dirname, "../uploads")));
 app.use("/api/face-onboarding",faceOnboardingRoutes);
+app.use("/api/attendance",attendanceRoutes);
 
 app.use(errorHandler);
 
