@@ -18,7 +18,7 @@ import {
   ChartNoAxesColumn,
 } from "lucide-react-native";
 
-import { getTeacherProfile } from "@/src/services/teacher.service";
+import { getTeacherProfile,getDashboardSummary } from "@/src/services/teacher.service";
 import { startLocationTracking } from "@/src/services/location.service";
 import { TouchableOpacity } from "react-native";
 import { router } from "expo-router";
@@ -28,6 +28,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [teacher, setTeacher] = useState<any>(null);
   const [locationStatus, setLocationStatus] = useState<any>(null);
+  const [summary,setSummary] = useState<any>(null);
 
   useEffect(() => {
     let subscription: any;
@@ -53,6 +54,8 @@ export default function DashboardScreen() {
     try {
       const response = await getTeacherProfile();
       setTeacher(response);
+      const summaryResponse = await getDashboardSummary();
+      setSummary(summaryResponse.data.data);
       return response;
     } catch (error) {
       console.log(error);
@@ -165,7 +168,7 @@ export default function DashboardScreen() {
                 </Text>
 
                 <Text className="mt-1 text-base font-semibold text-[#0F172A]">
-                  42 Students
+                  {summary?.totalStudents || 0} Students
                 </Text>
               </View>
             </View>
@@ -318,19 +321,19 @@ export default function DashboardScreen() {
             <View className="mt-4 flex-row justify-between">
               <View className="rounded-lg bg-green-100 px-3 py-2">
                 <Text className="text-base font-medium text-green-700">
-                  35 Added
+                  {summary?.onboarding?.added || 0} Added
                 </Text>
               </View>
 
               <View className="rounded-lg bg-yellow-100 px-3 py-2">
                 <Text className="text-base font-medium text-yellow-700">
-                  5 Pending
+                  {summary?.onboarding?.pending || 0} Pending
                 </Text>
               </View>
 
               <View className="rounded-lg bg-red-100 px-3 py-2">
                 <Text className="text-base font-medium text-red-700">
-                  2 Re-scan
+                  {summary?.onboarding?.rescan || 0} Re-scan
                 </Text>
               </View>
             </View>
@@ -368,7 +371,7 @@ export default function DashboardScreen() {
           <View className="flex-row flex-wrap justify-between gap-y-4">
             <View className="w-[48%] rounded-2xl bg-[#EEF2FF] p-4">
               <Text className="text-center text-3xl font-bold text-[#4338CA]">
-                38
+                {summary?.attendance?.presentStudents || 0}
               </Text>
 
               <Text className="mt-2 text-center text-base text-[#6366F1]">
@@ -378,7 +381,7 @@ export default function DashboardScreen() {
 
             <View className="w-[48%] rounded-2xl bg-[#FEF2F2] p-4">
               <Text className="text-center text-3xl font-bold text-[#DC2626]">
-                4
+                {summary?.attendance?.absentStudents || 0}
               </Text>
 
               <Text className="mt-2 text-center text-base text-[#EF4444]">
@@ -388,7 +391,7 @@ export default function DashboardScreen() {
 
             <View className="w-[48%] rounded-2xl bg-[#ECFDF5] p-4">
               <Text className="text-center text-3xl font-bold text-[#059669]">
-                36
+                {summary?.meals?.mealsServed || 0}
               </Text>
 
               <Text className="mt-2 text-center text-base text-[#10B981]">
@@ -398,7 +401,7 @@ export default function DashboardScreen() {
 
             <View className="w-[48%] rounded-2xl bg-[#FFFBEB] p-4">
               <Text className="text-center text-3xl font-bold text-[#D97706]">
-                90%
+                {summary?.attendance?.attendancePercentage || 0}%
               </Text>
 
               <Text className="mt-2 text-center text-base text-[#F59E0B]">

@@ -188,3 +188,118 @@ export const verifyTeacherLocationService = async (
     },
   };
 };
+
+
+export const getDashboardSummaryService =async (userId:string) => {
+    const teacher =await prisma.teacher.findFirst({
+        where:{
+          userId,
+        },
+
+        include:{
+          sections:{
+            include:{
+              section:true,
+            },
+          },
+        },
+      });
+
+    if (
+      !teacher ||
+      teacher.sections.length === 0
+    ) {
+      throw new Error(
+        "Teacher section not found"
+      );
+    }
+
+    const sectionId = teacher.sections[0].sectionId;
+    const totalStudents = await prisma.student.count({
+        where:{
+          sectionId,
+        },
+    });
+
+    const added = await prisma.student.count({
+        where:{
+          sectionId,
+          faceStatus:"ADDED",
+        },
+    });
+
+    const pending = await prisma.student.count({
+        where:{
+          sectionId,
+          faceStatus:"PENDING",
+        },
+    });
+
+    const rescan = await prisma.student.count({
+        where:{
+          sectionId,
+          faceStatus:"RESCAN",
+        },
+    });
+
+    const latestAttendance = await prisma.attendanceSession.findFirst({
+        where:{
+          sectionId,
+          status:"PROCESSED",
+        },
+
+        include:{
+          records:true,
+        },
+
+        orderBy:{
+          createdAt:"desc",
+        },
+      });
+
+    const presentStudents = latestAttendance?.records.filter((record) =>record.status === "PRESENT").length || 0;
+
+    const absentStudents =latestAttendance?.records.filter((record) =>record.status === "ABSENT").length || 0;
+
+    const attendancePercentage =
+      totalStudents > 0
+        ? Math.round(
+            (
+              presentStudents /
+              totalStudents
+            ) * 100
+          )
+        : 0;
+
+    const latestMeal =await prisma.mealSession.findFirst({
+        where:{
+          sectionId,
+          status:"CONFIRMED",
+        },
+
+        orderBy:{
+          createdAt:"desc",
+        },
+      });
+
+    const mealsServed =latestMeal?.totalDetected || 0;
+
+    return {
+      totalStudents,
+      attendance:{
+        presentStudents,
+        absentStudents,
+        attendancePercentage,
+      },
+
+      meals:{
+        mealsServed,
+      },
+
+      onboarding:{
+        added,
+        pending,
+        rescan,
+      },
+    };
+};

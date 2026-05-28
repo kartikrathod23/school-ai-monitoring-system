@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-import { getTeacherMeService, getTeacherSectionsService,getSectionStudentsService,verifyTeacherLocationService} from "./teacher.service";
+import { getTeacherMeService, getTeacherSectionsService,getSectionStudentsService,verifyTeacherLocationService, getDashboardSummaryService} from "./teacher.service";
 
 export const getTeacherMe = async (req: any, res: Response) => {
   try {
@@ -84,4 +84,21 @@ export const verifyTeacherLocation = async (
       message: error.message,
     });
   }
+};
+
+
+export const getDashboardSummary =async (req:any,res:Response) => {
+    try {
+      const data = await getDashboardSummaryService(req.user.userId );
+      return res.status(200).json({
+        success:true,
+        data,
+      });
+
+    } catch (error:any) {
+      return res.status(400).json({
+        success:false,
+        message:error.message,
+      });
+    }
 };
