@@ -133,3 +133,51 @@ export const updateAttendanceRecordService =async (recordId: string,body: any) =
       },
     });
 };
+
+
+export const getAttendanceHistoryService =async (userId:string) => {
+    const teacherSection = await prisma.teacherSection.findFirst({
+        where:{
+          teacher:{
+            userId,
+          },
+        },
+      });
+
+    if (!teacherSection) {
+      throw new Error(
+        "Teacher section not found"
+      );
+    }
+
+    const sessions = await prisma.attendanceSession.findMany({
+        where:{
+          sectionId:
+            teacherSection.sectionId,
+        },
+
+        include:{
+          records:true,
+        },
+
+        orderBy:{
+          createdAt:"desc",
+        },
+      });
+
+    return sessions.map((session) => {
+      const present = session.records.filter((record) =>record.status === "PRESENT").length;
+
+      const absent =session.records.filter((record) =>  record.status === "ABSENT").length;
+
+      const total =present + absent;
+      return {
+        id:session.id,
+        date:session.date,
+        status:session.status,
+        present,
+        absent,
+        attendancePercentage: total > 0? Math.round((present / total) * 100): 0,
+      };
+    });
+};

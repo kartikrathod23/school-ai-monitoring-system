@@ -4,6 +4,7 @@ import {
   getAttendanceSessionService,
   finalizeAttendanceService,
   updateAttendanceRecordService,
+  getAttendanceHistoryService
 } from "./attendance.service";
 
 export const createAttendance =async (req: any,res: Response) => {
@@ -77,6 +78,31 @@ export const updateAttendanceRecord =async (req: Request,res: Response) => {
       return res.status(400).json({
         success: false,
         message: error.message,
+      });
+    }
+};
+
+
+export const getAttendanceHistory =
+  async (req:any,res:Response) => {
+
+    try {
+
+      const data =
+        await getAttendanceHistoryService(
+          req.user.userId
+        );
+
+      return res.status(200).json({
+        success:true,
+        data,
+      });
+
+    } catch (error:any) {
+
+      return res.status(400).json({
+        success:false,
+        message:error.message,
       });
     }
 };

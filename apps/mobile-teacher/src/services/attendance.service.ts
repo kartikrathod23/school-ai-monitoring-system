@@ -29,3 +29,8 @@ export const finalizeAttendance =
 
     return response.data;
   };
+
+
+export const getAttendanceHistory = async () => {
+  return api.get("/attendance/history");
+};

@@ -352,15 +352,17 @@ export default function DashboardScreen() {
                 />
               </View>
 
-              <View className="ml-3">
-                <Text className="font-semibold text-[#0F172A]">
-                  View Previous Attendance
-                </Text>
+              <TouchableOpacity onPress={() =>router.push("/(protected)/attendance-history")}>
+                <View className="ml-3">
+                  <Text className="font-semibold text-[#0F172A]">
+                    View Previous Attendance
+                  </Text>
 
-                <Text className="mt-1 text-base text-gray-500">
-                  Read-only access
-                </Text>
-              </View>
+                  <Text className="mt-1 text-base text-gray-500">
+                    Read-only access
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
