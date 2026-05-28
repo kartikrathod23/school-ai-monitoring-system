@@ -39,6 +39,6 @@ export const uploadAttendanceImages =multer({
 });
 
 export const uploadMealImages =multer({
-  storage: createStorage("uploads/meal"),
+  storage: createStorage("uploads/meals"),
   ...commonConfig,
 });

@@ -262,7 +262,7 @@ export default function DashboardScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/(protected)/meal-capture")}className="rounded-2xl bg-[#10B981] p-4">
+            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/(protected)/meal-count")}className="rounded-2xl bg-[#10B981] p-4">
               <View className="flex-row items-center">
                 <View className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
                   <UtensilsCrossed

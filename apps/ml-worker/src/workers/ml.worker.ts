@@ -9,6 +9,10 @@ import {
   processAttendanceJob,
 } from "../services/attendance.service";
 
+import {
+  processMealJob,
+} from "../services/meal.service";
+
 export const mlWorker =
   new Worker(
     "ml-processing",
@@ -36,6 +40,12 @@ export const mlWorker =
               job.data
             );
 
+            break;
+
+          case "MEAL_COUNT_PROCESSING":
+            await processMealJob(
+              job.data
+            );
             break;
 
           default:

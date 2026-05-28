@@ -35,6 +35,7 @@ enum AttendanceStatus {
 
 enum MealSessionStatus {
   PENDING
+  PROCESSED
   CONFIRMED
 }
 
@@ -212,6 +213,23 @@ model AttendanceImage {
   createdAt DateTime @default(now())
 }
 
+
+model MealImage {
+  id String @id @default(uuid())
+
+  mealSessionId String
+
+  mealSession MealSession @relation(fields: [mealSessionId], references: [id], onDelete: Cascade)
+
+  imageUrl String
+
+  fileSize Int?
+
+  mimeType String?
+
+  createdAt DateTime @default(now())
+}
+
 model StudentFaceEmbedding {
   id String @id @default(uuid())
 
@@ -317,6 +335,8 @@ model MealSession {
   status MealSessionStatus @default(PENDING)
 
   mlJobs MlProcessingJob[]
+
+  images MealImage[]
 
   createdAt DateTime @default(now())
 
