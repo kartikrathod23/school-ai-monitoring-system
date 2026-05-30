@@ -1,6 +1,7 @@
 import prisma from "../../database/prisma";
 import { validateGeofence } from "../../common/utils/geofence";
 import { mlQueue } from "../../queues/ml.queue";
+import { uploadToS3 } from "../../common/utils/s3Upload";
 
 export const createFaceOnboardingService = async (
   userId: string,
@@ -71,11 +72,13 @@ export const createFaceOnboardingService = async (
     });
 
   for (const file of files) {
+    const imageUrl = await uploadToS3(file,"face-onboarding");
+
     await prisma.studentFaceImage.create({
       data: {
         studentId: student.id,
         onboardingSessionId: onboarding.id,
-        imageUrl: `${process.env.BACKEND_BASE_URL}/uploads/face-onboarding/${file.filename}`,
+        imageUrl,
         fileSize: file.size,
         mimeType: file.mimetype,
       },

@@ -1,6 +1,7 @@
 import prisma from "../../database/prisma";
 import { validateGeofence }from "../../common/utils/geofence";
 import { mlQueue }from "../../queues/ml.queue";
+import { uploadToS3 } from "../../common/utils/s3Upload";
 
 export const createAttendanceService =async (userId: string,body: any,files: Express.Multer.File[]) => {
     const teacherSection = await prisma.teacherSection.findFirst({
@@ -59,10 +60,12 @@ export const createAttendanceService =async (userId: string,body: any,files: Exp
       });
 
     for (const file of files) {
+      const imageUrl =await uploadToS3(file,"attendance");
+
       await prisma.attendanceImage.create({
         data: {
           attendanceSessionId:attendanceSession.id,
-          imageUrl:`/uploads/attendance/${file.filename}`,
+          imageUrl,
           mimeType:file.mimetype,
           fileSize:file.size,
         },
