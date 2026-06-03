@@ -1,181 +1,184 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+import os
 import numpy as np
-import json, sqlite3, os, requests, cv2, torch
+import cv2
+import requests
+import torch
 import torch.nn as nn
 import onnxruntime as ort
-from insightface.app import FaceAnalysis
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Any
 from io import BytesIO
 from PIL import Image
 import warnings
 warnings.filterwarnings('ignore')
 
-app = FastAPI()
+app = FastAPI(title="MobileFaceNet ML Service")
 
-# ── Load MobileFaceNet backbone ──────────────────────────────────
-print("Loading MobileFaceNet...")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# ── Load MobileFaceNet backbone ───────────────────────────────────
+print("Loading MobileFaceNet backbone...")
+BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
+ONNX_PATH = os.path.join(BASE_DIR, "w600k_mbf.onnx")
+DET_PATH  = os.path.join(BASE_DIR, "det_500m.onnx")
+
+backbone = ort.InferenceSession(ONNX_PATH, providers=['CPUExecutionProvider'])
+detector = ort.InferenceSession(DET_PATH,  providers=['CPUExecutionProvider'])
+
+INP_NAME = backbone.get_inputs()[0].name
+OUT_NAME = backbone.get_outputs()[0].name
+
+# Use insightface for face detection (handles all the complexity)
+from insightface.app import FaceAnalysis
 face_app = FaceAnalysis(name='buffalo_sc')
 face_app.prepare(ctx_id=-1, det_size=(640, 640))
+print("MobileFaceNet loaded OK")
 
-onnx_path = os.path.expanduser("~/.insightface/models/buffalo_sc/w600k_mbf.onnx")
-backbone  = ort.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
-inp_name  = backbone.get_inputs()[0].name
-out_name  = backbone.get_outputs()[0].name
+# ── Confidence thresholds ─────────────────────────────────────────
+PRESENT_THRESHOLD = 0.40   # cosine similarity >= this → PRESENT
+MANUAL_THRESHOLD  = 0.30   # cosine similarity >= this → MANUAL
+                            # below MANUAL_THRESHOLD   → ABSENT
 
-# ── Load classifier ──────────────────────────────────────────────
-class ClassifierHead(nn.Module):
-    def __init__(self, in_dim, num_classes):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(in_dim, 256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(0.3),
-            nn.Linear(256, 128),   nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(0.2),
-            nn.Linear(128, num_classes)
-        )
-    def forward(self, x): return self.net(x)
-
-CLASSIFIER_PATH = os.environ.get("CLASSIFIER_PATH", "../classifier.pt")
-ckpt = torch.load(CLASSIFIER_PATH, map_location="cpu")
-CLASS_NAMES = ckpt["class_names"]   # ["student_01", "student_02", ...]
-NUM_CLASSES  = ckpt["num_classes"]
-classifier  = ClassifierHead(512, NUM_CLASSES)
-classifier.load_state_dict(ckpt["model_state"])
-classifier.eval()
-print(f"Classifier loaded. Classes: {CLASS_NAMES}")
-
-# ── Helpers ──────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────
 def download_image(url: str) -> np.ndarray:
-    """Download image from S3 URL → numpy BGR array"""
-    resp = requests.get(url, timeout=15)
+    resp = requests.get(url, timeout=30)
     resp.raise_for_status()
     img = Image.open(BytesIO(resp.content)).convert("RGB")
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 def get_embedding(face_crop_bgr: np.ndarray) -> np.ndarray:
-    """112x112 BGR crop → 512-d normalized embedding"""
     img = cv2.resize(face_crop_bgr, (112, 112))
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = img.astype(np.float32)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
     img = (img - 127.5) / 127.5
-    img = np.transpose(img, (2, 0, 1))[np.newaxis]   # (1,3,112,112)
-    emb = backbone.run([out_name], {inp_name: img})[0][0]
-    emb = emb / np.linalg.norm(emb)
-    return emb
+    img = np.transpose(img, (2, 0, 1))[np.newaxis]
+    emb = backbone.run([OUT_NAME], {INP_NAME: img})[0][0]
+    norm = np.linalg.norm(emb)
+    return emb / (norm + 1e-8)
 
-def cosine_similarity(a, b):
+def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b))
 
-# ── API models ───────────────────────────────────────────────────
+def detect_and_embed(img_bgr: np.ndarray):
+    """Returns list of (embedding, bbox) for each face in image"""
+    faces = face_app.get(img_bgr)
+    results = []
+    for face in faces:
+        x1, y1, x2, y2 = [int(v) for v in face.bbox]
+        x1, y1 = max(0, x1), max(0, y1)
+        crop = img_bgr[y1:y2, x1:x2]
+        if crop.size == 0:
+            continue
+        emb = get_embedding(crop)
+        results.append(emb)
+    return results
+
+# ── Request models ────────────────────────────────────────────────
 class OnboardingRequest(BaseModel):
-    studentId:   str
-    imageUrls:   list[str]
+    studentId:  str
+    imageUrls:  List[str]
+
+class EmbeddingRecord(BaseModel):
+    studentId:  str
+    embedding:  Any   # JSON from DB — could be list or nested
 
 class AttendanceRequest(BaseModel):
     attendanceSessionId: str
     sectionId:           str
-    imageUrls:           list[str]
-    studentEmbeddings:   list[dict]  # [{studentId, embedding: [...512 floats]}]
+    imageUrls:           List[str]
+    studentEmbeddings:   List[EmbeddingRecord]
 
 class MealRequest(BaseModel):
     mealSessionId: str
-    imageUrls:     list[str]
+    imageUrls:     List[str]
 
-# ────────────────────────────────────────────────────────────────
-# ROUTE 1: Face Onboarding
-# Input: student's enrollment image URLs
-# Output: 512-d embedding to store in DB
-# ────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+# ROUTE 1: /onboarding
+# Gets 5 photo URLs → detects face in each → stores all embeddings
+# ─────────────────────────────────────────────────────────────────
 @app.post("/onboarding")
 async def onboarding(req: OnboardingRequest):
-    embeddings = []
+    all_embeddings = []
 
     for url in req.imageUrls:
         try:
-            img   = download_image(url)
-            faces = face_app.get(img)
-
-            if not faces:
-                print(f"  No face in {url}")
-                continue
-
-            # Pick largest face
-            face = max(faces, key=lambda f: (f.bbox[2]-f.bbox[0])*(f.bbox[3]-f.bbox[1]))
-            x1,y1,x2,y2 = [int(v) for v in face.bbox]
-            x1,y1 = max(0,x1), max(0,y1)
-            crop  = img[y1:y2, x1:x2]
-            emb   = get_embedding(crop)
-            embeddings.append(emb.tolist())
-
+            img  = download_image(url)
+            embs = detect_and_embed(img)
+            if embs:
+                # Take the largest/most prominent face per photo
+                all_embeddings.append(embs[0].tolist())
+                print(f"  OK: {url[-40:]}")
+            else:
+                print(f"  No face: {url[-40:]}")
         except Exception as e:
-            print(f"  Error on {url}: {e}")
+            print(f"  Error on image: {e}")
             continue
 
-    if not embeddings:
-        return {"success": False, "error": "No face detected in any image"}
-
-    # Average all embeddings → one representative vector
-    avg_emb = np.mean(embeddings, axis=0)
-    avg_emb = avg_emb / np.linalg.norm(avg_emb)
+    if not all_embeddings:
+        return {
+            "success": False,
+            "error":   "No face detected in any uploaded image"
+        }
 
     return {
         "success":      True,
-        "embedding":    avg_emb.tolist(),
+        "embeddings":   all_embeddings,      # list of 512-d arrays (up to 5)
         "modelVersion": "MobileFaceNet-v1",
-        "facesFound":   len(embeddings),
+        "facesFound":   len(all_embeddings),
         "totalImages":  len(req.imageUrls)
     }
 
-# ────────────────────────────────────────────────────────────────
-# ROUTE 2: Attendance Recognition
-# Input: classroom group photo URLs + stored student embeddings
-# Output: list of {studentId, status, confidence}
-# ────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+# ROUTE 2: /attendance
+# Gets classroom photo URLs + stored embeddings → marks attendance
+# ─────────────────────────────────────────────────────────────────
 @app.post("/attendance")
 async def attendance(req: AttendanceRequest):
-    PRESENT_THRESHOLD = 0.85
-    MANUAL_THRESHOLD  = 0.70
 
-    # Build stored embedding map: studentId → list of np arrays
-    db_embeddings = {}
+    # Build DB embedding map: studentId → list of np arrays
+    db_map: dict = {}
     for rec in req.studentEmbeddings:
-        sid = rec["studentId"]
-        emb = np.array(rec["embedding"])
-        # embedding stored as JSON array in DB — could be nested
-        if isinstance(emb[0], list):
-            emb = np.array(emb[0])
-        emb = emb / (np.linalg.norm(emb) + 1e-8)
-        if sid not in db_embeddings:
-            db_embeddings[sid] = []
-        db_embeddings[sid].append(emb)
+        sid = rec.studentId
+        raw = rec.embedding
 
-    all_student_ids = list(db_embeddings.keys())
-    detected_results = []   # [{studentId, confidence, status}]
+        # Handle both flat list and nested list from Prisma JSON
+        if isinstance(raw, list) and len(raw) > 0 and isinstance(raw[0], list):
+            emb = np.array(raw[0], dtype=np.float32)
+        else:
+            emb = np.array(raw, dtype=np.float32)
+
+        norm = np.linalg.norm(emb)
+        emb  = emb / (norm + 1e-8)
+
+        if sid not in db_map:
+            db_map[sid] = []
+        db_map[sid].append(emb)
+
+    all_student_ids = list(db_map.keys())
+    print(f"Students in DB for this section: {len(all_student_ids)}")
+
+    detected_map: dict = {}   # studentId → {confidence, status}
     total_heads = 0
 
     for url in req.imageUrls:
         try:
-            img   = download_image(url)
-            faces = face_app.get(img)
-            total_heads += len(faces)
+            img  = download_image(url)
+            embs = detect_and_embed(img)
+            total_heads += len(embs)
+            print(f"  Photo faces detected: {len(embs)}")
 
-            for face in faces:
-                x1,y1,x2,y2 = [int(v) for v in face.bbox]
-                x1,y1 = max(0,x1), max(0,y1)
-                crop  = img[y1:y2, x1:x2]
+            for query_emb in embs:
+                best_id    = None
+                best_score = -1.0
 
-                if crop.size == 0:
-                    continue
-
-                query_emb = get_embedding(crop)
-
-                # Compare against every stored student embedding
-                best_student = None
-                best_score   = -1
-
-                for sid, stored_embs in db_embeddings.items():
-                    score = max(cosine_similarity(query_emb, e) for e in stored_embs)
+                for sid, stored_embs in db_map.items():
+                    score = max(cosine_sim(query_emb, e) for e in stored_embs)
                     if score > best_score:
-                        best_score   = score
-                        best_student = sid
+                        best_score = score
+                        best_id    = sid
+
+                print(f"    Best match: {best_id} score={best_score:.3f}")
 
                 if best_score >= PRESENT_THRESHOLD:
                     status = "PRESENT"
@@ -183,81 +186,87 @@ async def attendance(req: AttendanceRequest):
                     status = "MANUAL"
                 else:
                     status = "ABSENT"
-                    best_student = None
+                    best_id = None
 
-                if best_student:
-                    detected_results.append({
-                        "studentId":  best_student,
+                if best_id and best_id not in detected_map:
+                    detected_map[best_id] = {
+                        "studentId":  best_id,
                         "confidence": round(best_score, 4),
                         "status":     status
-                    })
+                    }
+                elif best_id and best_score > detected_map[best_id]["confidence"]:
+                    # Keep highest confidence if same student detected twice
+                    detected_map[best_id] = {
+                        "studentId":  best_id,
+                        "confidence": round(best_score, 4),
+                        "status":     status
+                    }
 
         except Exception as e:
-            print(f"  Error on {url}: {e}")
+            print(f"  Error processing photo: {e}")
             continue
 
-    # Deduplicate: if same student detected multiple times keep highest confidence
-    seen = {}
-    for r in detected_results:
-        sid = r["studentId"]
-        if sid not in seen or r["confidence"] > seen[sid]["confidence"]:
-            seen[sid] = r
-
-    # Students not detected → ABSENT
-    absent_results = []
+    # Students not matched → ABSENT
+    final_results = list(detected_map.values())
     for sid in all_student_ids:
-        if sid not in seen:
-            absent_results.append({
+        if sid not in detected_map:
+            final_results.append({
                 "studentId":  sid,
                 "confidence": 0.0,
                 "status":     "ABSENT"
             })
 
-    final = list(seen.values()) + absent_results
-    detected_count = len(seen)
-    avg_conf = np.mean([r["confidence"] for r in seen.values()]) if seen else 0.0
+    present_count = sum(1 for r in final_results if r["status"] == "PRESENT")
+    manual_count  = sum(1 for r in final_results if r["status"] == "MANUAL")
+    absent_count  = sum(1 for r in final_results if r["status"] == "ABSENT")
+    conf_values   = [r["confidence"] for r in detected_map.values()]
+    avg_conf      = float(np.mean(conf_values)) if conf_values else 0.0
+
+    print(f"Result — Present:{present_count} Manual:{manual_count} Absent:{absent_count} Heads:{total_heads}")
 
     return {
-        "results":       final,
+        "results":       final_results,
         "totalHeads":    total_heads,
-        "detectedCount": detected_count,
-        "absentCount":   len(absent_results),
-        "avgConfidence": round(float(avg_conf), 4)
+        "detectedCount": len(detected_map),
+        "absentCount":   absent_count,
+        "avgConfidence": round(avg_conf, 4)
     }
 
-# ────────────────────────────────────────────────────────────────
-# ROUTE 3: Meal Counting
-# Input: meal photo URLs
-# Output: count of people detected
-# ────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+# ROUTE 3: /meal
+# Gets meal photo URLs → counts faces (= students receiving meal)
+# ─────────────────────────────────────────────────────────────────
 @app.post("/meal")
 async def meal(req: MealRequest):
     total_detected = 0
-    confidence_scores = []
+    all_scores     = []
 
     for url in req.imageUrls:
         try:
             img   = download_image(url)
             faces = face_app.get(img)
-            count = len(faces)
-            total_detected += count
-
-            # confidence based on detection quality scores
-            if faces:
-                scores = [float(f.det_score) for f in faces]
-                confidence_scores.extend(scores)
-
+            total_detected += len(faces)
+            scores = [float(f.det_score) for f in faces]
+            all_scores.extend(scores)
+            print(f"  Meal photo faces: {len(faces)}")
         except Exception as e:
-            print(f"  Error on {url}: {e}")
+            print(f"  Error on meal image: {e}")
             continue
 
-    avg_confidence = float(np.mean(confidence_scores)) if confidence_scores else 0.0
+    avg_confidence = float(np.mean(all_scores)) if all_scores else 0.0
 
     return {
         "totalDetected":  total_detected,
         "confidenceScore": round(avg_confidence, 4)
     }
 
+# ─────────────────────────────────────────────────────────────────
+# ROUTE 4: /health
+# ─────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model": "MobileFaceNet-v1", "classes": len(CLASS_NAMES)}
+    return {
+        "status": "ok",
+        "model":  "MobileFaceNet (w600k_mbf.onnx)",
+        "detector": "RetinaFace (det_500m.onnx)"
+    }
