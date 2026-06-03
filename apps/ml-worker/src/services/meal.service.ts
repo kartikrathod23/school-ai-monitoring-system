@@ -1,5 +1,6 @@
 import prisma from "../config/prisma";
 import axios from "axios";
+import { presignImageUrls } from "../utils/s3Presign";
 
 const ML_URL = process.env.MODEL_URL || "http://localhost:8000";
 
@@ -16,7 +17,7 @@ export const processMealJob = async (data: any) => {
       where: { mealSessionId: data.mealSessionId }
     });
 
-    const imageUrls = images.map(img => img.imageUrl);
+    const imageUrls = await presignImageUrls(images.map((img) => img.imageUrl));
 
     const mlResponse = await axios.post(`${ML_URL}/meal`, {
       mealSessionId: data.mealSessionId,

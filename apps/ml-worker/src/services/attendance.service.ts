@@ -1,5 +1,6 @@
 import prisma from "../config/prisma";
 import axios from "axios";
+import { presignImageUrls } from "../utils/s3Presign";
 
 const ML_URL = process.env.MODEL_URL || "http://localhost:8000";
 
@@ -39,7 +40,7 @@ export const processAttendanceJob = async (data: any) => {
         }
 
         // Step 3: Call Python ML API
-        const imageUrls = images.map(img => img.imageUrl);
+        const imageUrls = await presignImageUrls(images.map((img) => img.imageUrl));
 
         const mlResponse = await axios.post(`${ML_URL}/attendance`, {
             attendanceSessionId: data.attendanceSessionId,
