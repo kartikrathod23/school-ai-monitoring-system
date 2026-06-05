@@ -55,6 +55,7 @@ export default function DashboardScreen() {
       const response = await getTeacherProfile();
       setTeacher(response);
       const summaryResponse = await getDashboardSummary();
+      console.log("Dashboard Summary:", summaryResponse.data.data);
       setSummary(summaryResponse.data.data);
       return response;
     } catch (error) {
