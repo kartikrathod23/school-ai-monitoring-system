@@ -52,7 +52,7 @@ export default function AttendanceCaptureScreen() {
     }
 
     if (images.length >= 10) {
-      Alert.alert( "Limit reached", "Maximum 10 photos allowed");
+      Alert.alert( "Limit reached", "You can click only one photo");
       return;
     }
 
@@ -72,8 +72,8 @@ export default function AttendanceCaptureScreen() {
 
   const submitAttendance = async () => {
     try {
-      if (images.length < 6) {
-        Alert.alert("Minimum photos required","Capture at least 6 photos");
+      if (images.length < 1) {
+        Alert.alert("Minimum photos required","Capture at least 1 photo");
         return;
       }
 
@@ -172,14 +172,14 @@ export default function AttendanceCaptureScreen() {
             <Text className="ml-2 text-base font-semibold text-white"> Face Scanning for Attendance</Text>
           </View>
 
-          <Text className="mt-3 text-sm text-white">Click at least 6 classroom photos</Text>
+          <Text className="mt-3 text-sm text-white">Click clear classroom photos</Text>
+          <Text className="mt-1 text-sm text-white">• You can click multiple pictures but ensure every student apperas in at most 1 picture</Text>
           <Text className="mt-1 text-sm text-white">• Ensure all students are visible</Text>
           <Text className="mt-1 text-sm text-white"> • Use good lighting</Text>
           <Text className="mt-1 text-sm text-white"> • Hold camera steady</Text>
-          <Text className="mt-1 text-sm text-white">• No gallery upload - camera only</Text>
         </View>
 
-        <View className="bg-[#1E293B] px-4 py-3">
+        {/* <View className="bg-[#1E293B] px-4 py-3">
           <View className="flex-row items-center">
             <Ionicons
               name="information-circle-outline"
@@ -189,7 +189,7 @@ export default function AttendanceCaptureScreen() {
 
             <Text className="ml-2 text-sm text-[#CBD5E1]">AI will match student faces for attendance marking </Text>
           </View>
-        </View>
+        </View> */}
 
         <View className="px-4 pt-5">
           <View className="overflow-hidden rounded-3xl border border-[#334155] bg-[#1E293B]">
@@ -278,15 +278,15 @@ export default function AttendanceCaptureScreen() {
 
           <TouchableOpacity
             disabled={
-              images.length < 6 ||
+              images.length < 1 ||
               uploading
             }
 
             onPress={submitAttendance}
 
             className={`mt-4 h-14 items-center justify-center rounded-2xl ${
-              images.length >= 6
-                ? "bg-[#2563EB]"
+              images.length >= 1
+                ? "bg-[#16A34A]"
                 : "bg-gray-600"
             }`}
           >

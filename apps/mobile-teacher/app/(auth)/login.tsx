@@ -60,9 +60,7 @@ export default function LoginScreen() {
       Toast.show({
         type: "error",
         text1: "Login Failed",
-        text2:
-          error?.response?.data?.message ||
-          "Something went wrong",
+        text2:error.message || "Something went wrong",
       });
     } finally {
       setLoading(false);

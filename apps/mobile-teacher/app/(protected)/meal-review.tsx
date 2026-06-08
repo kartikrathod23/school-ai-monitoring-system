@@ -139,7 +139,7 @@ export default function MealReviewScreen() {
 
                 </View>
 
-                <View className="mx-4 mt-5 rounded-2xl border border-[#CBD5E1] bg-[#F8FAFC] p-5">
+                {/* <View className="mx-4 mt-5 rounded-2xl border border-[#CBD5E1] bg-[#F8FAFC] p-5">
 
                     <Text className="font-bold text-[#2563EB]">
                         AI Head Count Explanation:
@@ -165,7 +165,7 @@ export default function MealReviewScreen() {
 
                     </View>
 
-                </View>
+                </View> */}
 
                 <View className="mx-4 mt-5 rounded-2xl bg-white p-5">
 

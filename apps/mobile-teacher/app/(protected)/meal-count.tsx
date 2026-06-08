@@ -19,24 +19,15 @@ import {
     startMealSession,
     getMealSession,
 } from "@/src/services/meal.service";
-
 import { api } from "@/src/lib/api";
 
 export default function MealCountScreen() {
 
-    const [permission, requestPermission] =
-        useCameraPermissions();
-
+    const [permission, requestPermission] =useCameraPermissions();
     const cameraRef = useRef<any>(null);
-
-    const [images, setImages] =
-        useState<string[]>([]);
-
-    const [uploading, setUploading] =
-        useState(false);
-
-    const [sectionId, setSectionId] =
-        useState("");
+    const [images, setImages] =useState<string[]>([]);
+    const [uploading, setUploading] =useState(false);
+    const [sectionId, setSectionId] =useState("");
 
     useEffect(() => {
 
@@ -46,84 +37,46 @@ export default function MealCountScreen() {
     }, []);
 
     const loadSection = async () => {
-
         try {
-
-            const response =
-                await api.get("/teacher/sections");
-
-            setSectionId(
-                response.data.data[0]?.sectionId
-            );
-
+            const response =await api.get("/teacher/sections");
+            setSectionId(response.data.data[0]?.sectionId);
         } catch (error) {
-
             console.log(error);
         }
     };
 
     const capturePhoto = async () => {
-
         if (!cameraRef.current) {
             return;
         }
 
         if (images.length >= 10) {
-
-            Alert.alert(
-                "Limit reached",
-                "Maximum 10 photos allowed"
-            );
-
+            Alert.alert("Limit reached","Maximum 10 photos allowed");
             return;
         }
 
-        const photo =
-            await cameraRef.current.takePictureAsync({
-                quality: 0.7,
-            });
+        const photo =await cameraRef.current.takePictureAsync({quality: 0.7,});
 
-        setImages((prev) => [
-            ...prev,
-            photo.uri,
-        ]);
+        setImages((prev) => [...prev, photo.uri,]);
     };
 
     const removeImage = (index: number) => {
-
         setImages((prev) =>
             prev.filter((_, i) => i !== index)
         );
     };
 
     const submitMeal = async () => {
-
         try {
-
             setUploading(true);
-
-            const location =
-                await Location.getCurrentPositionAsync({});
-
+            const location =await Location.getCurrentPositionAsync({});
             const formData = new FormData();
 
-            formData.append(
-                "sectionId",
-                sectionId
-            );
-
-            formData.append(
-                "latitude",
-                String(location.coords.latitude)
-            );
-
-            formData.append(
-                "longitude",
-                String(location.coords.longitude)
-            );
+            formData.append("sectionId", sectionId );
+            formData.append("latitude",String(location.coords.latitude));
+            formData.append("longitude",String(location.coords.longitude));
 
             images.forEach((uri, index) => {
-
                 formData.append("images", {
                     uri,
                     name: `meal-${index}.jpg`,
@@ -131,22 +84,17 @@ export default function MealCountScreen() {
                 } as any);
             });
 
-            const response =
-                await startMealSession(formData);
-
-            const sessionId =
-                response.data.data.id;
+            const response = await startMealSession(formData);
+            const sessionId =response.data.data.id;
 
             pollMealResult(sessionId);
 
         } catch (error: any) {
-
             Alert.alert(
                 "Error",
                 error?.response?.data?.message ||
                 "Meal processing failed"
             );
-
             setUploading(false);
         }
     };
@@ -157,43 +105,25 @@ export default function MealCountScreen() {
 
         const interval =
             setInterval(async () => {
-
-                try {
-
-                    const response =
-                        await getMealSession(sessionId);
-
-                    const session =
-                        response.data.data;
-
-                    if (
-                        session.status === "PROCESSED"
-                    ) {
-
+                try{
+                    const response =await getMealSession(sessionId);
+                    const session =response.data.data;
+                    if (session.status === "PROCESSED") {
                         clearInterval(interval);
-
                         setUploading(false);
-
                         router.push({
-                            pathname:
-                                "/(protected)/meal-review",
-
-                            params: {
-                                sessionId,
-                            },
+                            pathname: "/(protected)/meal-review",
+                            params: {sessionId,},
                         });
                     }
 
                 } catch (error) {
-
                     console.log(error);
                 }
-
             }, 3000);
     };
 
     if (!permission?.granted) {
-
         return (
             <View className="flex-1 items-center justify-center bg-[#091222]">
                 <ActivityIndicator color="white" />
@@ -202,9 +132,7 @@ export default function MealCountScreen() {
     }
 
     return (
-
         <SafeAreaView className="flex-1 bg-[#091222]">
-
             <View className="flex-row items-center justify-between bg-[#091222] px-4 py-4">
 
                 <TouchableOpacity
@@ -247,7 +175,11 @@ export default function MealCountScreen() {
                     <View className="mt-4 gap-y-2">
 
                         <Text className="text-white">
-                            • Click at least 5 classroom photos
+                            • Click at least one classroom photos
+                        </Text>
+
+                        <Text className="text-white">
+                            • You can click multiple pictures, but ensure one student appears in at most one picture
                         </Text>
 
                         <Text className="text-white">
@@ -262,21 +194,17 @@ export default function MealCountScreen() {
                             • Hold camera steady
                         </Text>
 
-                        <Text className="text-white">
-                            • No gallery upload - camera only
-                        </Text>
 
                     </View>
-
                 </View>
 
-                <View className="bg-[#1B2740] px-4 py-3">
+                {/* <View className="bg-[#1B2740] px-4 py-3">
 
                     <Text className="text-[#D1D5DB] text-[14px]">
                         AI will count total students for meal calculation (no identity)
                     </Text>
 
-                </View>
+                </View> */}
 
                 <View className="mx-4 mt-5 overflow-hidden rounded-3xl border border-[#475569]">
 
@@ -360,12 +288,12 @@ export default function MealCountScreen() {
 
                     <TouchableOpacity
                         disabled={
-                            images.length < 5 ||
+                            images.length < 1 ||
                             uploading
                         }
                         onPress={submitMeal}
-                        className={`mt-4 rounded-2xl py-4 ${images.length < 5
-                                ? "bg-[#166534]"
+                        className={`mt-4 rounded-2xl py-4 ${images.length < 1
+                                ? "bg-gray-600"
                                 : "bg-[#16A34A]"
                             }`}
                     >

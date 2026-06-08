@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 
 import {
   View,
@@ -65,6 +67,12 @@ export default function DashboardScreen() {
     }
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboard();
+    }, [])
+  );
+
   if (loading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-[#F4F7FB]">
@@ -125,7 +133,7 @@ export default function DashboardScreen() {
 
         <View className="px-4 pb-10 pt-4">
           <Text className="mb-3 text-base font-semibold text-[#475569]">
-            Assigned Class (Read-Only)
+            Assigned Class
           </Text>
 
           <View className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
@@ -341,7 +349,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
 
           <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
-            View Reports (Read-Only)
+            View Reports
           </Text>
 
           <View className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
