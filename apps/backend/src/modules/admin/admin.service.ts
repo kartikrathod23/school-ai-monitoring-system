@@ -259,7 +259,7 @@ export const getTeachersService = async (query: {
   const limit = query.limit || 10;
   const skip = (page - 1) * limit;
 
-  const whereCondition = query.search
+  const whereCondition: any = query.search
     ? {
         user: {
           OR: [

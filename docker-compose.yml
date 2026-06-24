@@ -1,27 +1,136 @@
-version: "3.8"
-
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: school_postgres
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Kkr@13245
-      POSTGRES_DB: school_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-# docker run -d --name redis -p 6379:6379 redis
+    networks:
+      - school_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:latest
-    container_name: redis
-    restart: always
+    image: redis:7-alpine
+    container_name: school_redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    networks:
+      - school_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-setup:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: school_db_setup
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    command: npx prisma migrate deploy
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - school_network
+
+  python-service:
+    build:
+      context: ./apps/ml-worker/src/ml/python_service
+      dockerfile: Dockerfile
+    container_name: school_python_service
+    restart: unless-stopped
+    expose:
+      - "8000"
+    networks:
+      - school_network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: school_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      BACKEND_BASE_URL: http://backend:5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      db-setup:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - school_network
+
+  ml-worker:
+    build:
+      context: ./apps/ml-worker
+      dockerfile: Dockerfile
+    container_name: school_ml_worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      BACKEND_URL: http://backend:5000/api
+      MODEL_URL: http://python-service:8000
+    depends_on:
+      db-setup:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      python-service:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - school_network
+
+  web-admin:
+    build:
+      context: ./apps/web-admin
+      dockerfile: Dockerfile
+    container_name: school_web_admin
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - school_network
 
 volumes:
   postgres_data:
+
+networks:
+  school_network:
+    driver: bridge

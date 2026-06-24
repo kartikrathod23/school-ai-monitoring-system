@@ -143,6 +143,7 @@ model Section {
 
   mealSessions          MealSession[]
   FaceOnboardingSession FaceOnboardingSession[]
+  modelAssets           ModelAsset[]
 
   @@unique([standardId, name])
 }
@@ -169,6 +170,8 @@ model Student {
   faceStatus FaceStatus @default(NOT_ADDED)
 
   faceEmbeddings StudentFaceEmbedding[]
+
+  cropImages AttendanceCropImage[]
 
   createdAt             DateTime                @default(now())
   FaceOnboardingSession FaceOnboardingSession[]
@@ -284,12 +287,18 @@ model AttendanceSession {
 
   confidenceScore Float?
 
+  // Offline attendance metadata
+  isOfflineSync     Boolean @default(false)  // true if submitted from mobile offline
+  deviceId          String?                  // device that captured the attendance
+  backboneVersion   String?                  // MobileFaceNet version used
+  classifierVersion String?                  // NN classifier version used
+
   createdAt DateTime @default(now())
 
-  records AttendanceRecord[]
-
-  images AttendanceImage[]
-  mlJobs MlProcessingJob[]
+  records    AttendanceRecord[]
+  images     AttendanceImage[]
+  mlJobs     MlProcessingJob[]
+  cropImages AttendanceCropImage[]
 
   @@unique([sectionId, date])
   @@index([teacherUserId])
@@ -312,6 +321,12 @@ model AttendanceRecord {
   isManualOverride Boolean @default(false)
 
   markedAt DateTime @default(now())
+
+  // On-device inference metadata (offline attendance)
+  cropImageUrl      String?  // S3 URL of the face crop from the group photo
+  embeddingVector   Json?    // 512-dim MobileFaceNet embedding — used for NN retraining
+  backboneVersion   String?  // MobileFaceNet model version used at inference
+  classifierVersion String?  // NN classifier version used at inference
 
   @@index([attendanceSessionId])
   @@index([studentId])
@@ -426,4 +441,72 @@ model MlProcessingJob {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// AttendanceCropImage
+// Stores face crops captured during offline attendance.
+// crop photo + 512-dim embedding + confirmed student label =
+// one training sample for the next Neural Network retraining cycle.
+// ─────────────────────────────────────────────────────────────────
+model AttendanceCropImage {
+  id String @id @default(uuid())
+
+  attendanceSessionId String
+  attendanceSession   AttendanceSession @relation(fields: [attendanceSessionId], references: [id], onDelete: Cascade)
+
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id])
+
+  imageUrl String  // S3 URL of the face crop
+
+  // 512-dim MobileFaceNet embedding of this crop.
+  // This is the feature vector the next NN training cycle will use as input.
+  // Note: classifier output (40-dim) is NOT stored — it is ephemeral.
+  embeddingVector Json
+
+  backboneVersion String  // which MobileFaceNet version extracted this embedding
+
+  isVerified Boolean @default(false)  // true after teacher confirms the student label
+
+  capturedAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([attendanceSessionId])
+  @@index([studentId])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ModelAsset
+// Registry of all backbone + classifier model versions.
+// Mobile app checks this to know if a newer model is available.
+// Teacher app downloads and caches locally for offline inference.
+// ─────────────────────────────────────────────────────────────────
+model ModelAsset {
+  id String @id @default(uuid())
+
+  // Human-readable names / versions
+  backboneVersion   String  // e.g. "MobileFaceNet-v1"
+  classifierVersion String  // e.g. "nn-classifier-v2"
+
+  // The section this classifier was trained for (NN is per-section)
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  // Download URLs for mobile app
+  backboneUrl   String  // S3 URL for the backbone model file
+  classifierUrl String  // S3 URL for the classifier model file
+
+  isActive Boolean @default(false)  // only one active per section at a time
+
+  // Metadata for tracking
+  trainedAt   DateTime  // when this model was trained
+  description String?   // e.g. "Trained on 200 crops, June 2026 batch"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sectionId])
+  @@index([sectionId, isActive])
 }
