@@ -1,0 +1,8 @@
+numpy==2.0.2
+opencv-python==4.13.0.88
+onnx==1.19.1
+onnxruntime==1.19.2
+torch==2.8.0
+pandas==2.3.3
+tqdm==4.67.1
+matplotlib==3.10.7
