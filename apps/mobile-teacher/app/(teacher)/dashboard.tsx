@@ -20,8 +20,8 @@ import {
   ChartNoAxesColumn,
 } from "lucide-react-native";
 
-import { getTeacherProfile,getDashboardSummary } from "@/src/services/teacher.service";
-import { startLocationTracking } from "@/src/services/location.service";
+import { getTeacherProfile,getDashboardSummary } from "@/src/services/teacher/teacher.service";
+import { startLocationTracking } from "@/src/services/shared/location.service";
 import { TouchableOpacity } from "react-native";
 import { router } from "expo-router";
 
@@ -252,7 +252,7 @@ export default function DashboardScreen() {
           </Text>
 
           <View className="gap-y-4">
-            <TouchableOpacity activeOpacity={0.8} onPress={() =>router.push("/(protected)/attendance-capture") } className="rounded-2xl bg-[#2563EB] p-4">
+            <TouchableOpacity activeOpacity={0.8} onPress={() =>router.push("/(teacher)/attendance-capture") } className="rounded-2xl bg-[#2563EB] p-4">
               <View className="flex-row items-center">
                 <View className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
                   <Camera
@@ -274,7 +274,7 @@ export default function DashboardScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/(protected)/meal-count")}className="rounded-2xl bg-[#10B981] p-4">
+            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/(teacher)/meal-count")}className="rounded-2xl bg-[#10B981] p-4">
               <View className="flex-row items-center">
                 <View className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
                   <UtensilsCrossed
@@ -303,7 +303,7 @@ export default function DashboardScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() =>
-              router.push("/(protected)/face-onboarding")
+              router.push("/(teacher)/face-onboarding")
             }
             className="rounded-2xl border border-[#E9D5FF] bg-[#FAF5FF] p-4"
           >
@@ -361,7 +361,7 @@ export default function DashboardScreen() {
                 />
               </View>
 
-              <TouchableOpacity onPress={() =>router.push("/(protected)/attendance-history")}>
+              <TouchableOpacity onPress={() =>router.push("/(teacher)/attendance-history")}>
                 <View className="ml-3">
                   <Text className="font-semibold text-[#0F172A]">
                     View Previous Attendance

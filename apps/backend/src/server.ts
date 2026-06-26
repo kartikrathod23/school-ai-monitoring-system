@@ -9,6 +9,7 @@ import path from "path";
 import faceOnboardingRoutes from "./modules/face-onboarding/faceOnboarding.routes";
 import attendanceRoutes from "./modules/attendance/attendance.routes";
 import mealRoutes from "./modules/meal/meal.routes";
+import studentRoutes from "./modules/students/student.routes";
 
 dotenv.config();
 
@@ -23,6 +24,8 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/face-onboarding",faceOnboardingRoutes);
 app.use("/api/attendance",attendanceRoutes);
 app.use("/api/meal",mealRoutes);
+app.use("/api/student",studentRoutes);
+
 
 app.use(errorHandler);
 

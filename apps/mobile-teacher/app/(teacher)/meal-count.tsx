@@ -18,7 +18,7 @@ import { router } from "expo-router";
 import {
     startMealSession,
     getMealSession,
-} from "@/src/services/meal.service";
+} from "@/src/services/teacher/meal.service";
 import { api } from "@/src/lib/api";
 
 export default function MealCountScreen() {
@@ -112,7 +112,7 @@ export default function MealCountScreen() {
                         clearInterval(interval);
                         setUploading(false);
                         router.push({
-                            pathname: "/(protected)/meal-review",
+                            pathname: "/(teacher)/meal-review",
                             params: {sessionId,},
                         });
                     }

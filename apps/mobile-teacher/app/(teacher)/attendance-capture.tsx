@@ -106,7 +106,7 @@ export default function AttendanceCaptureScreen() {
         );
 
       router.push({ 
-        pathname: "/(protected)/attendance-review",
+        pathname: "/(teacher)/attendance-review",
         params: {
           sessionId:
             response.data.data.id,

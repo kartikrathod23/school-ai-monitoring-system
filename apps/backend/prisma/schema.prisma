@@ -160,6 +160,10 @@ model Student {
 
   dateOfBirth DateTime?
 
+  aadhaarId String?
+  
+  aparId    String?
+
   profileImage String?
 
   faceImages StudentFaceImage[]

@@ -15,7 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
     getMealSession,
     finalizeMealSession,
-} from "@/src/services/meal.service";
+} from "@/src/services/teacher/meal.service";
 
 export default function MealReviewScreen() {
     const { sessionId } =useLocalSearchParams();

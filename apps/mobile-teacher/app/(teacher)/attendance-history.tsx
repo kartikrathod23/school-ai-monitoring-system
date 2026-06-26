@@ -16,7 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react-native";
 
-import {getAttendanceHistory,} from "@/src/services/attendance.service";
+import {getAttendanceHistory,} from "@/src/services/teacher/attendance.service";
 
 export default function AttendanceHistoryScreen() {
   const [loading,setLoading] =useState(true);

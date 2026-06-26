@@ -16,7 +16,7 @@ import { router } from "expo-router";
 
 import Toast from "react-native-toast-message";
 
-import { loginTeacher } from "../../src/services/auth.service";
+import { loginUser } from "../../src/services/auth/auth.service";
 import { saveToken } from "../../src/lib/storage";
 import { useAuthStore } from "../../src/store/auth.store";
 
@@ -41,7 +41,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-      const response = await loginTeacher(
+      const response = await loginUser(
         identifier,
         password
       );
@@ -55,7 +55,13 @@ export default function LoginScreen() {
         text1: "Login Successful",
       });
 
-      router.replace("/(protected)/dashboard");
+      if (response.user.role === "TEACHER") {
+        router.replace("/(teacher)/dashboard");
+      }
+
+      if (response.user.role === "STUDENT") {
+        router.replace("/(student)/dashboard");
+      }
     } catch (error: any) {
       Toast.show({
         type: "error",
@@ -98,30 +104,30 @@ export default function LoginScreen() {
             {/* ICON */}
             <View className="items-center">
               <View className="h-20 w-20 items-center justify-center rounded-full bg-[#2563EB]">
-                <Text className="text-[34px] text-white">
-                  👨‍🏫
+                <Text className="text-[40px] text-white">
+                  🏫
                 </Text>
               </View>
 
               <Text className="mt-5 text-[30px] font-bold text-[#1E293B]">
-                Teacher Login
+                Smart School Portal
               </Text>
 
               <Text className="mt-2 text-center text-[15px] text-[#64748B]">
-                Daily Attendance & Meal Recording
+                Login using your Teacher or Student account
               </Text>
             </View>
 
             {/* ID */}
             <View className="mt-8">
               <Text className="mb-2 text-sm font-medium text-[#475569]">
-                Teacher ID / Mobile
+                User ID / Mobile
               </Text>
 
               <TextInput
                 value={identifier}
                 onChangeText={setIdentifier}
-                placeholder="Enter your ID or mobile number"
+                placeholder="Enter your User ID or mobile number"
                 placeholderTextColor="#94A3B8"
                 className="h-14 rounded-xl border border-[#D7DFEA] bg-[#F8FAFC] px-4 text-base text-black"
               />
@@ -170,14 +176,16 @@ export default function LoginScreen() {
 
             {/* INFO */}
             <View className="rounded-2xl bg-[#EEF4FF] p-4">
-              <Text className="text-sm font-bold text-[#1D4ED8]">
-                Role: Teacher
+
+              <Text className="text-base font-bold text-[#1D4ED8]">
+                Building Smarter Schools
               </Text>
 
-              <Text className="mt-1 text-sm leading-5 text-[#2563EB]">
-                You can mark attendance and record meal counts
-                for your assigned classes only.
+              <Text className="mt-2 text-sm leading-6 text-[#2563EB]">
+                Streamlining attendance, student records, and daily school
+                operations through a secure digital platform.
               </Text>
+
             </View>
           </View>
 

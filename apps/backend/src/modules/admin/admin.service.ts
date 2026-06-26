@@ -398,6 +398,7 @@ export const createStudentService = async (data: {
   sectionId: string;
   rollNumber: number;
   dateOfBirth: string;
+  
   profileImage?: string;
 }) => {
 

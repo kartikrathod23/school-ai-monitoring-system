@@ -23,7 +23,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Location from "expo-location";
-import { uploadFaceImages } from "@/src/services/faceOnboarding.service";
+import { uploadFaceImages } from "@/src/services/teacher/faceOnboarding.service";
 
 export default function FaceCaptureScreen() {
   const { studentId, studentName } =useLocalSearchParams();

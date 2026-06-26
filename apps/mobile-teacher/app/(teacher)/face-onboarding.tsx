@@ -193,7 +193,7 @@ export default function FaceOnboardingScreen() {
 
               onPress={() =>
                 router.push({
-                  pathname:"/(protected)/face-capture/[studentId]",
+                  pathname:"/(teacher)/face-capture/[studentId]",
                   params: {
                     studentId: item.id,
                     studentName: item.user.firstName +" " + item.user.lastName,

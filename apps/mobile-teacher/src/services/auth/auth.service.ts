@@ -1,6 +1,6 @@
-import { api } from "../lib/api";
+import { api } from "../../lib/api";
 
-export const loginTeacher = async (identifier: string,password: string) => {
+export const loginUser = async (identifier: string,password: string) => {
   try {
     const response = await api.post("/auth/login",{identifier, password,});
     return response.data;

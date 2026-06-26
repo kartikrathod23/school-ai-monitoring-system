@@ -15,7 +15,7 @@ import { api } from "@/src/lib/api";
 import {
   updateAttendanceRecord,
   finalizeAttendance,
-} from "@/src/services/attendance.service";
+} from "@/src/services/teacher/attendance.service";
 
 export default function AttendanceReviewScreen() {
 
