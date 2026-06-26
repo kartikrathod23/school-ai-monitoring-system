@@ -12,7 +12,7 @@ import { mobileFaceNet } from "../ml/mobilefacenet";
 import { studentClassifier } from "../ml/classifier";
 import { CachedStudent } from "../types/model.types";
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.100:5000/api";
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || "http://192.168.31.82:5000/api";
 const MODELS_DIR = `${FileSystem.documentDirectory}models/`;
 
 export const syncModelAssets = async (sectionId: string, token: string): Promise<void> => {
@@ -30,17 +30,34 @@ export const syncModelAssets = async (sectionId: string, token: string): Promise
 
     // 2. Check if we already have this model active locally
     const localAsset = await getActiveModelAsset(sectionId);
+    let forceDownload = false;
+
+    if (localAsset) {
+      const bbInfo = await FileSystem.getInfoAsync(localAsset.backbonePath);
+      const clfInfo = await FileSystem.getInfoAsync(localAsset.classifierPath);
+      
+      // If files are missing or too small (< 100KB), they might be corrupted XML files or missing .data
+      // A valid classifier is at least ~265KB due to the 512x128 linear layer.
+      if (!bbInfo.exists || bbInfo.size < 100000 || !clfInfo.exists || clfInfo.size < 100000) {
+        console.log("[ModelSync] Found corrupted local model. Forcing re-download.");
+        forceDownload = true;
+      }
+    }
+
     if (
+      !forceDownload &&
       localAsset &&
       localAsset.backboneVersion === serverAsset.backboneVersion &&
       localAsset.classifierVersion === serverAsset.classifierVersion
     ) {
-      console.log("[ModelSync] Model is up to date.");
+      console.log(`[ModelSync] Model is up to date.`);
+      console.log(`[ModelSync] Location (Backbone): ${localAsset.backbonePath}`);
+      console.log(`[ModelSync] Location (Classifier): ${localAsset.classifierPath}`);
       await loadModelsIntoMemory(localAsset.backbonePath, localAsset.classifierPath, localAsset.classifierVersion);
       return;
     }
 
-    console.log("[ModelSync] New model available. Downloading...");
+    console.log("[ModelSync] New model available or local is corrupted. Downloading...");
 
     // 3. Ensure models directory exists
     const dirInfo = await FileSystem.getInfoAsync(MODELS_DIR);
@@ -54,7 +71,10 @@ export const syncModelAssets = async (sectionId: string, token: string): Promise
     const bbPath = `${MODELS_DIR}${bbFilename}`;
     const clfPath = `${MODELS_DIR}${clfFilename}`;
 
+    console.log(`[ModelSync] Downloading backbone to: ${bbPath}`);
     await FileSystem.downloadAsync(serverAsset.backboneUrl, bbPath);
+    
+    console.log(`[ModelSync] Downloading classifier to: ${clfPath}`);
     await FileSystem.downloadAsync(serverAsset.classifierUrl, clfPath);
 
     // 5. Save metadata to SQLite
@@ -100,7 +120,7 @@ export const syncStudentEmbeddings = async (sectionId: string, token: string): P
   }
 };
 
-const loadModelsIntoMemory = async (bbPath: string, clfPath: string, clfVersion: string) => {
+export const loadModelsIntoMemory = async (bbPath: string, clfPath: string, clfVersion: string) => {
   try {
     await mobileFaceNet.loadModel(bbPath);
     await studentClassifier.loadModel(clfPath, clfVersion);

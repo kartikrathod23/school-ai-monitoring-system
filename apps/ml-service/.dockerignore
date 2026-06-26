@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.env
+dist/
+artifacts/
+models/*.onnx
+output/
+*.log
+.git
+.gitignore

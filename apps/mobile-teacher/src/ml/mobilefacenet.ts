@@ -17,58 +17,104 @@
  *   - Output: number[] of length 512, L2-normalized
  */
 
+
+import { InferenceSession, Tensor } from "onnxruntime-react-native";
+import { Buffer } from "buffer";
+import * as jpeg from "jpeg-js";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
+import * as FileSystem from "expo-file-system/legacy";
 import { EmbeddingResult } from "./types";
 
 const BACKBONE_VERSION = "MobileFaceNet-v1";
 
 class MobileFaceNetBackbone {
   private isReady = false;
+  private session: InferenceSession | null = null;
   private modelPath: string | null = null;
 
-  /**
-   * Load the backbone model from the local filesystem.
-   * Call once at app startup after downloading from server.
-   *
-   * @param modelPath - Absolute path to the model file on device
-   */
   async loadModel(modelPath: string): Promise<void> {
     this.modelPath = modelPath;
-
-    // ── TODO: replace stub with actual ONNX/TFLite load ──────────
-    // Example (onnxruntime-react-native):
-    //   import { InferenceSession } from "onnxruntime-react-native";
-    //   this.session = await InferenceSession.create(modelPath);
-    //   this.isReady = true;
-    // ─────────────────────────────────────────────────────────────
-
-    console.warn("[MobileFaceNet] STUB — model not yet wired. Awaiting model file.");
-    // Leave isReady = false until actual model is integrated
+    try {
+      this.session = await InferenceSession.create(modelPath);
+      this.isReady = true;
+      console.log("[MobileFaceNet] Successfully loaded ONNX model!");
+    } catch (err) {
+      console.error("[MobileFaceNet] Error loading ONNX model:", err);
+      this.isReady = false;
+    }
   }
 
-  /**
-   * Extract a 512-dim L2-normalized embedding from a face crop.
-   *
-   * @param cropBase64 - Base64-encoded JPEG face crop
-   * @returns EmbeddingResult with 512-dim vector + version
-   * @throws Error if model is not loaded
-   */
-  extractEmbedding(cropBase64: string): EmbeddingResult {
-    if (!this.isReady) {
-      throw new Error(
-        "[MobileFaceNet] Model not loaded. Call loadModel() first."
-      );
+  async extractEmbedding(cropBase64: string): Promise<EmbeddingResult> {
+    if (!this.isReady || !this.session) {
+      throw new Error("[MobileFaceNet] Model not loaded. Call loadModel() first.");
     }
 
-    // ── TODO: replace with actual inference ───────────────────────
-    // Steps:
-    //   1. Decode base64 → pixel buffer
-    //   2. Resize to 112×112
-    //   3. Normalize: (pixel - 127.5) / 127.5
-    //   4. Run ONNX/TFLite model
-    //   5. L2-normalize the 512-dim output
-    // ─────────────────────────────────────────────────────────────
+    // 1. Resize to 112x112 exactly (MobileFaceNet input size)
+    const tempFile = `${FileSystem.cacheDirectory}temp_crop_${Date.now()}.jpg`;
+    await FileSystem.writeAsStringAsync(tempFile, cropBase64, { encoding: "base64" as any });
+    
+    const resized = await manipulateAsync(
+      `file://${tempFile}`,
+      [{ resize: { width: 112, height: 112 } }],
+      { base64: true, format: SaveFormat.JPEG, compress: 1.0 }
+    );
+    await FileSystem.deleteAsync(tempFile, { idempotent: true });
 
-    throw new Error("[MobileFaceNet] Inference stub — not implemented yet.");
+    if (!resized.base64) throw new Error("Resize failed");
+
+    // 2. Decode JPEG to raw RGBA pixels
+    const buffer = Buffer.from(resized.base64, "base64");
+    const rawImageData = jpeg.decode(buffer, { useTArray: true });
+
+    // 3. Convert RGBA to Float32Array [1, 3, 112, 112]
+    // MobileFaceNet requires: RGB format, normalized (pixel - 127.5) / 128.0
+    const width = rawImageData.width;
+    const height = rawImageData.height;
+    const channelCount = 3;
+    const float32Data = new Float32Array(1 * channelCount * height * width);
+
+    let offset = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        const r = rawImageData.data[i];
+        const g = rawImageData.data[i + 1];
+        const b = rawImageData.data[i + 2];
+
+        // Normalization
+        float32Data[offset] = (r - 127.5) / 128.0;
+        float32Data[offset + height * width] = (g - 127.5) / 128.0;
+        float32Data[offset + 2 * height * width] = (b - 127.5) / 128.0;
+        offset++;
+      }
+    }
+
+    // 4. Create ONNX Tensor
+    const tensor = new Tensor("float32", float32Data, [1, 3, 112, 112]);
+
+    // 5. Run inference
+    const feeds: Record<string, Tensor> = {};
+    feeds[this.session.inputNames[0]] = tensor;
+    
+    const output = await this.session.run(feeds);
+    const outputTensor = output[this.session.outputNames[0]];
+
+    // 6. L2 Normalize the output (512 dims)
+    const rawOutput = outputTensor.data as Float32Array;
+    let sumSq = 0;
+    for (let i = 0; i < rawOutput.length; i++) {
+      sumSq += rawOutput[i] * rawOutput[i];
+    }
+    const norm = Math.sqrt(sumSq);
+    const normalized = new Array(rawOutput.length);
+    for (let i = 0; i < rawOutput.length; i++) {
+      normalized[i] = rawOutput[i] / norm;
+    }
+
+    return {
+      embedding: normalized,
+      backboneVersion: BACKBONE_VERSION,
+    };
   }
 
   get ready(): boolean {

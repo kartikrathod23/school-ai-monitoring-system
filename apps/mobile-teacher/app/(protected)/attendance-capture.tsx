@@ -12,7 +12,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { api } from "@/src/lib/api";
+
+import { getSectionCache, SectionCache } from "@/src/lib/sectionCache";
+import { checkCurrentLocation } from "@/src/services/location.service";
 
 import {
   startOfflineSession,
@@ -30,7 +32,7 @@ export default function AttendanceCaptureScreen() {
   const [images, setImages] = useState<{ uri: string; base64: string }[]>([]);
   const [processing, setProcessing] = useState(false);
   const [progressText, setProgressText] = useState("");
-  const [sectionId, setSectionId] = useState("");
+  const [sectionData, setSectionData] = useState<SectionCache | null>(null);
   
   const { token } = useAuthStore();
 
@@ -41,12 +43,17 @@ export default function AttendanceCaptureScreen() {
 
   const loadSection = async () => {
     try {
-      // In a fully offline app, this should also load from local SQLite.
-      // For now, we assume the teacher selected a section beforehand.
-      const response = await api.get("/teacher/sections");
-      setSectionId(response.data.data[0]?.sectionId);
+      const data = await getSectionCache();
+      if (data) {
+        setSectionData(data);
+      } else {
+        Alert.alert(
+          "Setup Required",
+          "Please return to the dashboard while online to sync your section data."
+        );
+      }
     } catch (error) {
-      console.log("Failed to load sections from API", error);
+      console.log("Failed to load section data from cache", error);
     }
   };
 
@@ -81,17 +88,39 @@ export default function AttendanceCaptureScreen() {
       Alert.alert("Minimum photos required", "Capture at least 1 photo");
       return;
     }
-    if (!sectionId) {
-      Alert.alert("Error", "No section selected");
+    if (!sectionData) {
+      Alert.alert("Error", "No section data. Please sync while online.");
       return;
     }
 
     try {
       setProcessing(true);
+
+      // Geo-fence verification
+      setProgressText("Verifying location...");
+      const locationCheck = await checkCurrentLocation(
+        sectionData.schoolLatitude,
+        sectionData.schoolLongitude,
+        sectionData.geoRadius
+      );
+
+      if (!locationCheck.isInside) {
+        Alert.alert(
+          "Geo-Fence Verification Failed",
+          `You must be on school premises to take attendance.\nYou are currently ${Math.round(locationCheck.distance)} meters away.`
+        );
+        return;
+      }
       
       // 1. Start session in SQLite
       setProgressText("Starting offline session...");
-      const session = await startOfflineSession(sectionId);
+      const session = await startOfflineSession(sectionData.sectionId);
+
+      setProgressText("Initializing ML models...");
+      const { faceDetector } = require("@/src/ml/faceDetector");
+      if (!faceDetector.ready) {
+        await faceDetector.initialize();
+      }
 
       // 2. Process each photo locally (Detection -> Backbone -> Classifier -> Save Record)
       for (let i = 0; i < images.length; i++) {

@@ -153,6 +153,46 @@ export const updateRecordStatus = async (
   );
 };
 
+export const reassignRecordToStudent = async (
+  sourceRecordId: string,
+  sessionId: string,
+  targetStudentId: string,
+  targetRollNumber: number,
+  targetStudentName: string
+): Promise<void> => {
+  const db = getDb();
+  
+  // 1. Delete the existing ABSENT record for the target student (if any)
+  // We use executeAsync or runAsync multiple times safely
+  await db.runAsync(
+    `DELETE FROM offline_attendance_records 
+     WHERE session_id = ? AND student_id = ? AND id != ?`,
+    [sessionId, targetStudentId, sourceRecordId]
+  );
+
+  // 2. Update the source record to point to the new student and mark PRESENT
+  await db.runAsync(
+    `UPDATE offline_attendance_records
+     SET student_id = ?, roll_number = ?, student_name = ?, status = 'PRESENT', is_manual_override = 1
+     WHERE id = ?`,
+    [targetStudentId, targetRollNumber, targetStudentName, sourceRecordId]
+  );
+};
+
+export const updateRecordWithNewPhoto = async (
+  recordId: string,
+  cropImagePath: string,
+  embeddingVector: number[]
+): Promise<void> => {
+  const db = getDb();
+  await db.runAsync(
+    `UPDATE offline_attendance_records
+     SET crop_image_path = ?, embedding_vector = ?, status = 'PRESENT', is_manual_override = 1, confidence = 1.0
+     WHERE id = ?`,
+    [cropImagePath, JSON.stringify(embeddingVector), recordId]
+  );
+};
+
 // ─────────────────────────────────────────────────────────────────
 // Row mappers
 // ─────────────────────────────────────────────────────────────────

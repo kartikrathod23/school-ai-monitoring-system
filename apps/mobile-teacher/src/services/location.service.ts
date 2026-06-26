@@ -12,6 +12,34 @@ const calculateDistanceInMeters = (lat1: number,lon1: number,lat2: number,lon2: 
   return R * c;
 };
 
+export const checkCurrentLocation = async (
+  schoolLatitude: number,
+  schoolLongitude: number,
+  geoRadius: number
+): Promise<{ isInside: boolean; distance: number }> => {
+  const permission = await Location.requestForegroundPermissionsAsync();
+
+  if (permission.status !== "granted") {
+    throw new Error("Location permission denied");
+  }
+
+  const location = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.High,
+  });
+
+  const distance = calculateDistanceInMeters(
+    location.coords.latitude,
+    location.coords.longitude,
+    schoolLatitude,
+    schoolLongitude
+  );
+
+  return {
+    isInside: distance <= geoRadius,
+    distance,
+  };
+};
+
 export const startLocationTracking = async (
   schoolLatitude: number,
   schoolLongitude: number,

@@ -18,19 +18,30 @@ import {
   UtensilsCrossed,
   Users,
   ChartNoAxesColumn,
+  Wifi,
+  WifiOff,
 } from "lucide-react-native";
 
-import { getTeacherProfile,getDashboardSummary } from "@/src/services/teacher.service";
-import { startLocationTracking } from "@/src/services/location.service";
+import { getTeacherProfile, getDashboardSummary } from "@/src/services/teacher.service";
+import { startLocationTracking, checkCurrentLocation } from "@/src/services/location.service";
+import { syncModelAssets, syncStudentEmbeddings } from "@/src/services/modelSync.service";
+import { getActiveModelAsset } from "@/src/db/modelAsset";
+import { saveSectionCache } from "@/src/lib/sectionCache";
+import { useAuthStore } from "@/src/store/auth.store";
 import { TouchableOpacity } from "react-native";
 import { router } from "expo-router";
-
+import { LogOut } from "lucide-react-native";
+import { removeToken } from "@/src/lib/storage";
+import { loadModelsIntoMemory } from "@/src/services/modelSync.service";
+import { syncOfflineAttendance } from "@/src/services/syncManager.service";
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [teacher, setTeacher] = useState<any>(null);
   const [locationStatus, setLocationStatus] = useState<any>(null);
-  const [summary,setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<any>(null);
+  const [modelReady, setModelReady] = useState<boolean | null>(null); // null = checking
+  const { token } = useAuthStore();
 
   useEffect(() => {
     let subscription: any;
@@ -38,9 +49,76 @@ export default function DashboardScreen() {
     const initialize = async () => {
       const teacherData = await fetchDashboard();
       const school = teacherData?.sections?.[0]?.section?.standard?.school;
+      const sectionId = teacherData?.sections?.[0]?.sectionId;
 
-      if (!school) return;
-      subscription = await startLocationTracking(school.latitude, school.longitude, school.geoRadius, (locationData) => { setLocationStatus(locationData); });
+      if (school && sectionId) {
+        // Cache geo-fence data locally — used by attendance-capture.tsx offline
+        await saveSectionCache({
+          sectionId,
+          schoolLatitude: school.latitude,
+          schoolLongitude: school.longitude,
+          geoRadius: school.geoRadius,
+        });
+
+        // Start live location tracking for the dashboard indicator
+        subscription = await startLocationTracking(
+          school.latitude,
+          school.longitude,
+          school.geoRadius,
+          (locationData) => setLocationStatus(locationData)
+        );
+
+        // Do an immediate location check so the UI doesn't show
+        // "Checking location..." for 60 seconds waiting for the watcher
+        try {
+          const initial = await checkCurrentLocation(
+            school.latitude,
+            school.longitude,
+            school.geoRadius
+          );
+          setLocationStatus({
+            isInside: initial.isInside,
+            distance: initial.distance,
+            currentLatitude: 0,
+            currentLongitude: 0,
+          });
+        } catch (locationErr) {
+          console.warn("[Dashboard] Initial location check failed:", locationErr);
+        }
+
+        // Sync model assets + student embeddings in the background
+        if (token) {
+          // Trigger offline data sync to backend
+          syncOfflineAttendance(token).catch(err => console.warn("[Dashboard] Sync offline attendance failed:", err.message));
+
+          Promise.all([
+            syncModelAssets(sectionId, token),
+            syncStudentEmbeddings(sectionId, token),
+          ])
+            .then(async () => {
+              const localAsset = await getActiveModelAsset(sectionId);
+              setModelReady(!!localAsset);
+            })
+            .catch((err) => {
+              console.warn("[Dashboard] Model sync failed (offline?):", err.message);
+              // Still check if we have a locally cached model
+              getActiveModelAsset(sectionId)
+                .then(async (a) => {
+                  if (a) await loadModelsIntoMemory(a.backbonePath, a.classifierPath, a.classifierVersion);
+                  setModelReady(!!a);
+                })
+                .catch(() => setModelReady(false));
+            });
+        } else {
+          // No token (shouldn't happen on dashboard) — check local cache
+          getActiveModelAsset(sectionId)
+            .then(async (a) => {
+              if (a) await loadModelsIntoMemory(a.backbonePath, a.classifierPath, a.classifierVersion);
+              setModelReady(!!a);
+            })
+            .catch(() => setModelReady(false));
+        }
+      }
     };
 
     initialize();
@@ -52,13 +130,23 @@ export default function DashboardScreen() {
     };
   }, []);
 
+  const handleLogout = async () => {
+    await removeToken();
+    useAuthStore.getState().logout();
+    router.replace("/(auth)/login");
+  };
+
   const fetchDashboard = async () => {
     try {
       const response = await getTeacherProfile();
       setTeacher(response);
-      const summaryResponse = await getDashboardSummary();
-      console.log("Dashboard Summary:", summaryResponse.data.data);
-      setSummary(summaryResponse.data.data);
+      try {
+        const summaryResponse = await getDashboardSummary();
+        setSummary(summaryResponse.data.data);
+      } catch (summaryErr: any) {
+        // Summary can fail if teacher has no attendance yet — non-fatal
+        console.log("[Dashboard] Summary not available yet:", summaryErr?.message);
+      }
       return response;
     } catch (error) {
       console.log(error);
@@ -102,12 +190,17 @@ export default function DashboardScreen() {
               </Text>
             </View>
 
-            <View className="h-11 w-11 overflow-hidden rounded-full bg-white items-center justify-center">
-              <Image
-                source={require("../../assets/images/uitb-logo.jpg")}
-                className="h-10 w-10"
-                resizeMode="contain"
-              />
+            <View className="flex-row items-center gap-3">
+              <TouchableOpacity onPress={handleLogout} className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
+                <LogOut size={20} color="white" />
+              </TouchableOpacity>
+              <View className="h-11 w-11 overflow-hidden rounded-full bg-white items-center justify-center">
+                <Image
+                  source={require("../../assets/images/uitb-logo.jpg")}
+                  className="h-10 w-10"
+                  resizeMode="contain"
+                />
+              </View>
             </View>
           </View>
 
@@ -245,6 +338,64 @@ export default function DashboardScreen() {
               Geofence verification is required to mark
               attendance
             </Text>
+          </View>
+
+          <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
+            Offline AI Status
+          </Text>
+
+          <View
+            className={`rounded-2xl border p-4 ${
+              modelReady === true
+                ? "border-[#D1FAE5] bg-[#ECFDF5]"
+                : modelReady === false
+                ? "border-[#FEF08A] bg-[#FEF9C3]"
+                : "border-[#E2E8F0] bg-[#F8FAFC]"
+            }`}
+          >
+            <View className="flex-row items-center">
+              {modelReady === true ? (
+                <Wifi size={22} color="#059669" />
+              ) : modelReady === false ? (
+                <WifiOff size={22} color="#B45309" />
+              ) : (
+                <ActivityIndicator size="small" color="#64748B" />
+              )}
+
+              <View className="ml-3 flex-1">
+                <Text
+                  className={`font-semibold ${
+                    modelReady === true
+                      ? "text-[#065F46]"
+                      : modelReady === false
+                      ? "text-[#92400E]"
+                      : "text-[#475569]"
+                  }`}
+                >
+                  {modelReady === true
+                    ? "Models Ready"
+                    : modelReady === false
+                    ? "Models Missing"
+                    : "Checking Status..."}
+                </Text>
+
+                <Text
+                  className={`mt-1 text-base ${
+                    modelReady === true
+                      ? "text-[#047857]"
+                      : modelReady === false
+                      ? "text-[#B45309]"
+                      : "text-[#64748B]"
+                  }`}
+                >
+                  {modelReady === true
+                    ? "Ready for offline attendance capture"
+                    : modelReady === false
+                    ? "Requires internet to download latest models"
+                    : "Verifying local AI models..."}
+                </Text>
+              </View>
+            </View>
           </View>
 
           <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">

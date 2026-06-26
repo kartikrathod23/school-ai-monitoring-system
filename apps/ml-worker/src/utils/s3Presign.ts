@@ -21,6 +21,11 @@ function extractKeyFromUrl(url: string): string {
 export async function presignImageUrls(urls: string[]): Promise<string[]> {
   return Promise.all(
     urls.map(async (url) => {
+      // If it's a local or external URL not hosted on AWS S3, return as-is
+      if (!url.includes("amazonaws.com")) {
+        return url;
+      }
+
       const key = extractKeyFromUrl(url);
       const command = new GetObjectCommand({
         Bucket: BUCKET,

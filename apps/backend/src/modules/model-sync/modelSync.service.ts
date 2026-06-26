@@ -1,11 +1,111 @@
 import prisma from "../../database/prisma";
 
+export interface RegisterModelAssetInput {
+  sectionId: string;
+  backboneVersion: string;
+  classifierVersion: string;
+  backboneUrl: string;
+  classifierUrl: string;
+  labelMap?: Record<string, number>;  // roll_str -> class_id (stored as description audit)
+  description?: string;
+}
+
 // ─────────────────────────────────────────────────────────────────
-// getActiveModelAssetService
-// Returns the active ModelAsset for a given section.
-// Teacher app calls this at login / periodically to check if a
-// newer model is available for download.
+// registerModelAssetService
+// Called by the Python training pipeline (via POST /model-sync/register-asset)
+// after a new classifier ONNX is uploaded to S3.
+// Marks the new model as active and deactivates all previous models for this section.
 // ─────────────────────────────────────────────────────────────────
+export const registerModelAssetService = async (
+  input: RegisterModelAssetInput
+) => {
+  const {
+    sectionId,
+    backboneVersion,
+    classifierVersion,
+    backboneUrl,
+    classifierUrl,
+    labelMap,
+    description,
+  } = input;
+
+  // Verify section exists
+  const section = await prisma.section.findUnique({ where: { id: sectionId } });
+  if (!section) {
+    throw new Error(`Section not found: ${sectionId}`);
+  }
+
+  // Deactivate all existing models for this section
+  await prisma.modelAsset.updateMany({
+    where: { sectionId, isActive: true },
+    data: { isActive: false },
+  });
+
+  // Build description string including label map audit
+  const auditDescription = [
+    description ?? "",
+    labelMap
+      ? `LabelMap: ${JSON.stringify(labelMap)}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  // Create new active model asset
+  const asset = await prisma.modelAsset.create({
+    data: {
+      sectionId,
+      backboneVersion,
+      classifierVersion,
+      backboneUrl,
+      classifierUrl,
+      isActive: true,
+      trainedAt: new Date(),
+      description: auditDescription || undefined,
+    },
+  });
+
+  console.log(
+    `[ModelSync] Registered new model asset ${asset.id} ` +
+    `for section ${sectionId} (${classifierVersion})`
+  );
+
+  return {
+    id: asset.id,
+    sectionId: asset.sectionId,
+    backboneVersion: asset.backboneVersion,
+    classifierVersion: asset.classifierVersion,
+    backboneUrl: asset.backboneUrl,
+    classifierUrl: asset.classifierUrl,
+    isActive: asset.isActive,
+    trainedAt: asset.trainedAt,
+  };
+};
+
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { s3 } from "../../config/s3";
+
+const getPresignedUrl = async (rawUrl: string) => {
+  // rawUrl is like https://uitb-school-ai-prod.s3.ap-south-1.amazonaws.com/models/shared/Rec_Mobile_Net.onnx
+  try {
+    const bucket = process.env.AWS_BUCKET_NAME || "uitb-school-ai-prod";
+    // Extract everything after .amazonaws.com/
+    const keyMatch = rawUrl.match(/\.amazonaws\.com\/(.+)$/);
+    if (!keyMatch || !keyMatch[1]) return rawUrl;
+    
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: keyMatch[1],
+    });
+    // 1 hour expiration
+    return await getSignedUrl(s3, command, { expiresIn: 3600 });
+  } catch (err) {
+    console.error("[ModelSync] Failed to generate presigned URL:", err);
+    return rawUrl;
+  }
+};
+
 export const getActiveModelAssetService = async (
   userId: string,
   sectionId: string
@@ -35,8 +135,8 @@ export const getActiveModelAssetService = async (
     id: asset.id,
     backboneVersion: asset.backboneVersion,
     classifierVersion: asset.classifierVersion,
-    backboneUrl: asset.backboneUrl,
-    classifierUrl: asset.classifierUrl,
+    backboneUrl: await getPresignedUrl(asset.backboneUrl),
+    classifierUrl: await getPresignedUrl(asset.classifierUrl),
     trainedAt: asset.trainedAt,
     description: asset.description,
   };
@@ -109,4 +209,34 @@ export const getSectionEmbeddingsService = async (
       })),
     })),
   };
+};
+
+import { mlQueue } from "../../queues/ml.queue";
+
+export const triggerTrainingService = async (sectionId: string, userId: string, role: string) => {
+  if (role === "TEACHER") {
+    const teacherSection = await prisma.teacherSection.findFirst({
+      where: { teacher: { userId }, sectionId },
+    });
+    if (!teacherSection) {
+      throw new Error("Section not assigned to this teacher");
+    }
+  }
+
+  const job = await prisma.mlProcessingJob.create({
+    data: {
+      jobType: "TRAIN_CLASSIFIER",
+      status: "PENDING",
+      sectionId,
+    },
+  });
+
+  await mlQueue.add("TRAIN_CLASSIFIER", {
+    type: "TRAIN_CLASSIFIER",
+    mlJobId: job.id,
+    sectionId,
+    version: "v1",
+  });
+
+  return { jobId: job.id, message: "Classifier training job enqueued" };
 };

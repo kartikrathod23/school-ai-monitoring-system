@@ -1,0 +1,39 @@
+# Ignore everything by default (allow-list approach is sometimes safer, but we'll just ignore the big ones globally)
+
+# Node
+**/node_modules
+**/.next
+**/dist
+
+# Python
+**/venv
+**/env
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.egg-info
+**/.pytest_cache
+
+# Large ML / Data
+**/dataset
+**/output
+**/artifacts
+**/*.pth
+**/*.pt
+**/*.npy
+**/*.csv
+
+# Old / unused huge folders
+apps/face_attendance
+
+# Environment / Logs
+**/.env
+**/*.log
+**/npm-debug.log*
+
+# Git
+**/.git
+**/.gitignore
+
+# Mac
+**/.DS_Store

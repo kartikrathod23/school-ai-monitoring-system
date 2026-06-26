@@ -96,9 +96,21 @@ export const offlineSyncService = async (
     throw new Error("Section not assigned to this teacher");
   }
 
-  // 2. Create AttendanceSession (offline sync)
-  const session = await prisma.attendanceSession.create({
-    data: {
+  // 2. Upsert AttendanceSession (offline sync)
+  // This merges all offline syncs for the same day into a single backend session
+  const session = await prisma.attendanceSession.upsert({
+    where: {
+      sectionId_date: {
+        sectionId: payload.sectionId,
+        date: new Date(payload.date),
+      }
+    },
+    update: {
+      deviceId: payload.deviceId,
+      backboneVersion: payload.backboneVersion,
+      classifierVersion: payload.classifierVersion,
+    },
+    create: {
       sectionId: payload.sectionId,
       teacherUserId: userId,
       date: new Date(payload.date),
@@ -114,11 +126,32 @@ export const offlineSyncService = async (
 
   // 3. Process each attendance record
   for (const rec of payload.records) {
-    // 3a. Create the attendance record
+    const isUnknown = rec.studentId?.startsWith("UNKNOWN_");
+    let targetStudentId = isUnknown ? undefined : (rec.studentId || undefined);
+
+    // 3a. Remove existing record for this student in this session (if any) to prevent duplicates
+    if (targetStudentId) {
+      const studentExists = await prisma.student.findUnique({
+        where: { id: targetStudentId },
+      });
+      if (!studentExists) {
+        console.warn(`[offlineSync] Student ${targetStudentId} no longer exists. Marking as UNKNOWN.`);
+        targetStudentId = undefined;
+      } else {
+        await prisma.attendanceRecord.deleteMany({
+          where: {
+            attendanceSessionId: session.id,
+            studentId: targetStudentId,
+          }
+        });
+      }
+    }
+
+    // 3b. Create the attendance record
     const attendanceRecord = await prisma.attendanceRecord.create({
       data: {
         attendanceSessionId: session.id,
-        studentId: rec.studentId || undefined,
+        studentId: targetStudentId,
         status: rec.status,
         confidenceScore: rec.confidence,
         markedAt: new Date(rec.capturedAt),
@@ -150,7 +183,7 @@ export const offlineSyncService = async (
         await prisma.attendanceCropImage.create({
           data: {
             attendanceSessionId: session.id,
-            studentId: rec.studentId || undefined,
+            studentId: targetStudentId,
             imageUrl: cropUrl,
             embeddingVector: rec.embeddingVector, // 512-dim MobileFaceNet vector
             backboneVersion: payload.backboneVersion,

@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -64,6 +65,7 @@ enum MlJobType {
   FACE_EMBEDDING_GENERATION
   ATTENDANCE_PROCESSING
   MEAL_COUNT_PROCESSING
+  TRAIN_CLASSIFIER
 }
 
 model User {
@@ -426,6 +428,8 @@ model MlProcessingJob {
   mealSessionId String?
 
   mealSession MealSession? @relation(fields: [mealSessionId], references: [id])
+
+  sectionId String?
 
   status MlJobStatus @default(PENDING)
 

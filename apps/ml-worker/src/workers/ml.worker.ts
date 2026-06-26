@@ -6,8 +6,8 @@ import {
 } from "../services/onboarding.service";
 
 import {
-  processAttendanceJob,
-} from "../services/attendance.service";
+  processTrainClassifierJob,
+} from "../services/train_classifier.service";
 
 import {
   processMealJob,
@@ -34,9 +34,9 @@ export const mlWorker =
 
             break;
 
-          case "ATTENDANCE_PROCESSING":
+          case "TRAIN_CLASSIFIER":
 
-            await processAttendanceJob(
+            await processTrainClassifierJob(
               job.data
             );
 

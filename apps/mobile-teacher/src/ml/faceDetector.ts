@@ -21,41 +21,96 @@
  */
 
 import { DetectedFace } from "./types";
+import FaceDetection from "@react-native-ml-kit/face-detection";
+import * as FileSystem from "expo-file-system/legacy";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
+
+import { Image } from "react-native";
+
+const getImageSize = (uri: string): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve, reject) => {
+    Image.getSize(uri, (width, height) => resolve({ width, height }), reject);
+  });
+};
 
 class FaceDetector {
   private isReady = false;
 
-  /**
-   * Initialize the face detector.
-   * Call once at app startup.
-   */
   async initialize(): Promise<void> {
-    // ── TODO: initialize face detection model ─────────────────────
-    console.warn("[FaceDetector] STUB — detection not yet wired.");
+    this.isReady = true;
+    console.log("[FaceDetector] Initialized MLKit Face Detection.");
   }
 
-  /**
-   * Detect all faces in a group photo.
-   *
-   * @param imageBase64 - Base64-encoded JPEG of the full group photo
-   * @returns Array of DetectedFace, each with a cropped face image
-   */
   async detectFaces(imageBase64: string): Promise<DetectedFace[]> {
     if (!this.isReady) {
-      // In stub mode: return empty so caller can handle gracefully
-      console.warn("[FaceDetector] Not initialized — returning empty results.");
+      console.warn("[FaceDetector] Not initialized.");
       return [];
     }
 
-    // ── TODO: actual face detection ───────────────────────────────
-    // Steps:
-    //   1. Decode base64 → image
-    //   2. Run face detection model (bounding boxes)
-    //   3. For each bbox: crop the face region → base64
-    //   4. Return DetectedFace[]
-    // ─────────────────────────────────────────────────────────────
+    // 1. Save base64 to a temporary file because MLKit needs a URI
+    const tempFilePath = `${FileSystem.cacheDirectory}temp_group_${Date.now()}.jpg`;
+    await FileSystem.writeAsStringAsync(tempFilePath, imageBase64, {
+      encoding: "base64" as any,
+    });
 
-    throw new Error("[FaceDetector] Inference stub — not implemented yet.");
+    try {
+      // Get dimensions to clamp crop boxes
+      const { width: imgWidth, height: imgHeight } = await getImageSize(`file://${tempFilePath}`);
+
+      // 2. Detect faces using MLKit
+      const mlkitFaces = await FaceDetection.detect(`file://${tempFilePath}`);
+      
+      const detectedFaces: DetectedFace[] = [];
+
+      // 3. For each face, crop it using expo-image-manipulator
+      for (const face of mlkitFaces) {
+        const { frame } = face;
+        
+        // Clamp bounding box to image dimensions
+        const rightEdge = Math.min(imgWidth, frame.left + frame.width);
+        const bottomEdge = Math.min(imgHeight, frame.top + frame.height);
+        
+        const x = Math.max(0, frame.left);
+        const y = Math.max(0, frame.top);
+        
+        const w = rightEdge - x;
+        const h = bottomEdge - y;
+
+        if (w <= 0 || h <= 0) continue;
+
+        const bbox = {
+          x,
+          y,
+          width: w,
+          height: h,
+        };
+
+        // Crop the image
+        const cropResult = await manipulateAsync(
+          `file://${tempFilePath}`,
+          [{ crop: { originX: bbox.x, originY: bbox.y, width: Math.floor(bbox.width), height: Math.floor(bbox.height) } }],
+          { base64: true, format: SaveFormat.JPEG, compress: 0.8 }
+        );
+
+        if (cropResult.base64) {
+          detectedFaces.push({
+            bbox: bbox,
+            cropBase64: cropResult.base64,
+            detScore: 1.0,
+          });
+        }
+      }
+
+      console.log(`[FaceDetector] Found ${detectedFaces.length} faces.`);
+      return detectedFaces;
+
+    } catch (err) {
+      console.error("[FaceDetector] Error detecting faces:", err);
+      return [];
+    } finally {
+      // Cleanup temp file
+      await FileSystem.deleteAsync(tempFilePath, { idempotent: true });
+    }
   }
 
   get ready(): boolean {

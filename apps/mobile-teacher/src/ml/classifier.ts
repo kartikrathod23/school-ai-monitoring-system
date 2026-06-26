@@ -23,58 +23,74 @@
  *   sorted by roll number ascending (same order as GET /model-sync/embeddings).
  */
 
+import { InferenceSession, Tensor } from "onnxruntime-react-native";
 import { ClassifierResult } from "./types";
 
 class StudentClassifier {
   private isReady = false;
+  private session: InferenceSession | null = null;
   private _version = "not-loaded";
 
-  /**
-   * Load the NN classifier model from local filesystem.
-   *
-   * @param modelPath - Absolute path to the .onnx or .tflite file
-   * @param version   - Version string (e.g. "nn-classifier-v2")
-   */
   async loadModel(modelPath: string, version: string): Promise<void> {
     this._version = version;
-
-    // ── TODO: replace stub with actual ONNX/TFLite load ──────────
-    // Example (onnxruntime-react-native):
-    //   import { InferenceSession, Tensor } from "onnxruntime-react-native";
-    //   this.session = await InferenceSession.create(modelPath);
-    //   this.isReady = true;
-    // ─────────────────────────────────────────────────────────────
-
-    console.warn("[Classifier] STUB — model not yet wired. Awaiting model file.");
-    // Leave isReady = false until actual model is integrated
+    try {
+      this.session = await InferenceSession.create(modelPath);
+      this.isReady = true;
+      console.log(`[Classifier] Successfully loaded ONNX model v${version}!`);
+    } catch (err) {
+      console.error("[Classifier] Error loading ONNX model:", err);
+      this.isReady = false;
+    }
   }
 
-  /**
-   * Classify a 512-dim embedding into a student index.
-   *
-   * @param embedding - 512-element number[] from MobileFaceNet
-   * @returns ClassifierResult with studentIndex and confidence
-   * @throws Error if model is not loaded
-   */
-  classify(embedding: number[]): ClassifierResult {
-    if (!this.isReady) {
-      throw new Error(
-        "[Classifier] Model not loaded. Call loadModel() first."
-      );
+  async classify(embedding: number[]): Promise<ClassifierResult> {
+    if (!this.isReady || !this.session) {
+      throw new Error("[Classifier] Model not loaded. Call loadModel() first.");
     }
 
-    // ── TODO: replace with actual inference ───────────────────────
-    // Steps:
-    //   1. Convert embedding to Float32Array
-    //   2. Create ONNX Tensor: new Tensor("float32", float32Array, [1, 512])
-    //   3. Run inference → logits tensor of shape [1, 40]
-    //   4. Apply softmax: exp(logit - max) / sum(exp(logit - max))
-    //   5. studentIndex = argmax(probs)
-    //   6. confidence = probs[studentIndex]
-    //   7. Discard probs array — return only index + confidence
-    // ─────────────────────────────────────────────────────────────
+    // 1. Convert embedding to Float32Array
+    const float32Array = new Float32Array(embedding);
 
-    throw new Error("[Classifier] Inference stub — not implemented yet.");
+    // 2. Create ONNX Tensor: shape [1, 512]
+    const tensor = new Tensor("float32", float32Array, [1, 512]);
+
+    // 3. Run inference -> logits tensor of shape [1, N]
+    const feeds: Record<string, Tensor> = {};
+    feeds[this.session.inputNames[0]] = tensor;
+    
+    const output = await this.session.run(feeds);
+    const logitsTensor = output[this.session.outputNames[0]];
+    const logits = logitsTensor.data as Float32Array;
+
+    // 4. Apply softmax: exp(logit - max) / sum(exp(logit - max))
+    let maxLogit = -Infinity;
+    for (let i = 0; i < logits.length; i++) {
+      if (logits[i] > maxLogit) maxLogit = logits[i];
+    }
+
+    let sumExp = 0;
+    const exps = new Float32Array(logits.length);
+    for (let i = 0; i < logits.length; i++) {
+      exps[i] = Math.exp(logits[i] - maxLogit);
+      sumExp += exps[i];
+    }
+
+    // 5. Calculate probabilities and find argmax
+    let studentIndex = -1;
+    let maxProb = -1;
+    for (let i = 0; i < logits.length; i++) {
+      const prob = exps[i] / sumExp;
+      if (prob > maxProb) {
+        maxProb = prob;
+        studentIndex = i;
+      }
+    }
+
+    return {
+      studentIndex,
+      confidence: maxProb,
+      classifierVersion: this._version,
+    };
   }
 
   get ready(): boolean {

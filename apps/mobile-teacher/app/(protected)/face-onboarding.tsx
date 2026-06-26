@@ -17,20 +17,42 @@ import {
 import { router } from "expo-router";
 import { api } from "@/src/lib/api";
 
+import { Alert, ToastAndroid, Platform } from "react-native";
+
 export default function FaceOnboardingScreen() {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sectionId, setSectionId] = useState<string | null>(null);
+  const [isTraining, setIsTraining] = useState(false);
 
   const loadStudents = async () => {
     try {
       const sectionsResponse = await api.get("/teacher/sections");
-      const section =sectionsResponse.data.data[0];
+      const section = sectionsResponse.data.data[0];
+      setSectionId(section.sectionId);
       const studentsResponse =await api.get(`/teacher/sections/${section.sectionId}/students`);
       setStudents(studentsResponse.data.data);
     } catch (error) {
       console.log(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTrainModel = async () => {
+    if (!sectionId) return;
+    setIsTraining(true);
+    try {
+      await api.post(`/model-sync/train/${sectionId}`);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show("Training started! The model will download when ready.", ToastAndroid.LONG);
+      } else {
+        Alert.alert("Success", "Training started! The model will download when ready.");
+      }
+    } catch (error: any) {
+      Alert.alert("Training Failed", error.response?.data?.message || error.message);
+    } finally {
+      setIsTraining(false);
     }
   };
 
@@ -321,6 +343,30 @@ export default function FaceOnboardingScreen() {
           );
         }}
 
+        ListFooterComponent={
+          addedCount >= 2 ? (
+            <View className="px-4 mt-8 mb-4">
+              <TouchableOpacity
+                onPress={handleTrainModel}
+                disabled={isTraining}
+                className={`rounded-2xl py-4 flex-row justify-center items-center ${
+                  isTraining ? "bg-purple-400" : "bg-[#9333EA]"
+                }`}
+              >
+                {isTraining ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white font-bold text-lg">
+                    Train Model (All Students)
+                  </Text>
+                )}
+              </TouchableOpacity>
+              <Text className="text-center text-xs text-gray-500 mt-3">
+                Run this once after adding faces for all students.
+              </Text>
+            </View>
+          ) : null
+        }
       />
           <View className="mt-8 flex-row items-center justify-center">
             <Text className="mr-2 text-sm text-[#64748B]">

@@ -1,38 +1,47 @@
-FROM node:20-alpine AS builder
-
+# ── Stage 1: Install dependencies ────────────────────────────────
+FROM node:22-alpine AS deps
 WORKDIR /app
-
-# openssl needed for Prisma
-RUN apk add --no-cache openssl
 
 COPY package*.json ./
-COPY prisma ./prisma/
+RUN npm ci --omit=dev
 
-# Install all deps (needed for prisma generate + tsc)
-RUN npm ci
-
-COPY tsconfig.json ./
-COPY src ./src
-
-RUN npx prisma generate && npm run build
-
-# --- Production image ---
-FROM node:20-alpine AS runner
-
+# ── Stage 2: Build TypeScript ─────────────────────────────────────
+FROM node:22-alpine AS builder
 WORKDIR /app
 
+COPY package*.json tsconfig.json ./
+RUN npm ci
+
+COPY prisma/ ./prisma/
+COPY src/ ./src/
+
+RUN npx prisma generate
+RUN npm run build
+
+# ── Stage 3: Runtime ──────────────────────────────────────────────
+FROM node:22-alpine AS runtime
+WORKDIR /app
+
+# Prisma engine requires openssl
 RUN apk add --no-cache openssl
 
-# Only copy what's needed to run
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+ENV NODE_ENV=production
 
-# Install only production deps (skips devDependencies)
-RUN npm ci --omit=dev
+# Copy production node_modules first
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy built output and generated Prisma client over top
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+
+# Copy prisma schema for migrations
+COPY prisma/ ./prisma/
 
 EXPOSE 5000
 
-CMD ["node", "dist/src/server.js"]
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:5000/ || exit 1
+
+# Run migrations then start server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/server.js"]
