@@ -70,7 +70,7 @@ export const initLocalDb = async (): Promise<void> => {
     );
 
     -- ─────────────────────────────────────────────────────────────
-    -- Downloaded model assets
+    -- Downloaded model assets 
     -- Tracks which backbone + classifier are cached on device.
     -- ─────────────────────────────────────────────────────────────
     CREATE TABLE IF NOT EXISTS model_assets (

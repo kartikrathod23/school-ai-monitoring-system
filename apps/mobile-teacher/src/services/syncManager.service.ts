@@ -10,8 +10,7 @@ import axios from "axios";
 import { getPendingSyncSessions, getSessionRecords, updateSessionStatus } from "../db/offlineAttendance";
 import { OfflineSyncPayload } from "../types/attendance.types";
 import * as FileSystem from "expo-file-system/legacy";
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || "http://192.168.31.82:5000/api";
+import { API_URL } from "../lib/api";
 
 export const syncOfflineAttendance = async (token: string): Promise<void> => {
   console.log("[SyncManager] Starting sync check...");
@@ -68,7 +67,7 @@ export const syncOfflineAttendance = async (token: string): Promise<void> => {
       };
 
       const response = await axios.post(
-        `${API_BASE}/attendance/offline-sync`,
+        `${API_URL}/attendance/offline-sync`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );

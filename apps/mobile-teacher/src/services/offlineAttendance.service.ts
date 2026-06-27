@@ -17,25 +17,27 @@
 
 import * as FileSystem from "expo-file-system/legacy";
 import * as Device from "expo-device";
-
 import { v4 as uuidv4 } from "uuid";
 
 import {
   createOfflineSession,
   upsertOfflineRecord,
-  updateSessionStatus,
   updateRecordWithNewPhoto,
 } from "../db/offlineAttendance";
 import { mobileFaceNet } from "../ml/mobilefacenet";
 import { studentClassifier } from "../ml/classifier";
 import { faceDetector } from "../ml/faceDetector";
 import { useAttendanceStore } from "../store/attendance.store";
-import { OfflineAttendanceSession, OfflineAttendanceRecord } from "../types/attendance.types";
+import {
+  OfflineAttendanceSession,
+  OfflineAttendanceRecord,
+} from "../types/attendance.types";
 
 // ─────────────────────────────────────────────────────────────────
 // saveCropToFilesystem
 // Saves a base64-encoded face crop as a JPEG on the device.
-// Returns the absolute local file path (used later during sync upload).
+// Returns the absolute path as stored by FileSystem (already includes
+// file:// on Expo/Android) — ready for <Image source={{ uri }}>.
 // ─────────────────────────────────────────────────────────────────
 const saveCropToFilesystem = async (
   cropBase64: string,
@@ -43,6 +45,7 @@ const saveCropToFilesystem = async (
   rollNumber: number
 ): Promise<string | undefined> => {
   try {
+    // FileSystem.documentDirectory already ends with "/" and starts with "file://"
     const cropsDir = `${FileSystem.documentDirectory}attendance_crops/${sessionId}/`;
 
     const dirInfo = await FileSystem.getInfoAsync(cropsDir);
@@ -57,6 +60,9 @@ const saveCropToFilesystem = async (
       encoding: "base64" as any,
     });
 
+    // filePath already looks like:
+    //   file:///data/user/0/com.xxx/files/attendance_crops/session/roll_1_123.jpg
+    // Return it as-is — do NOT add another file:// prefix.
     return filePath;
   } catch (err) {
     console.warn("[OfflineAttendance] Failed to save crop to filesystem:", err);
@@ -99,7 +105,8 @@ export const processAttendancePhoto = async (
 ): Promise<void> => {
   const store = useAttendanceStore.getState();
   const session = store.currentSession;
-  if (!session) throw new Error("No active session. Call startOfflineSession() first.");
+  if (!session)
+    throw new Error("No active session. Call startOfflineSession() first.");
 
   const sectionStudents = store.sectionStudents;
   if (!sectionStudents.length) {
@@ -123,19 +130,19 @@ export const processAttendancePhoto = async (
     const face = faces[i];
 
     try {
-      // 1. Extract 512-dim embedding via MobileFaceNet backbone
+      // 1. Extract 512-dim embedding
+      //    cropBase64 is already 112×112 JPEG from faceDetector — no resize needed
       const embResult = await mobileFaceNet.extractEmbedding(face.cropBase64);
 
-      // 2. Classify embedding → student index + confidence
+      // 2. Classify → student index + confidence
       const clfResult = await studentClassifier.classify(embResult.embedding);
 
-      // 3. Map index → student
-      //    sectionStudents is sorted by rollNumber ASC (same as training order)
+      // 3. Map index → student (sorted by rollNumber ASC, matching training order)
       const student = sectionStudents[clfResult.studentIndex];
       if (!student) {
         console.warn(
           `[OfflineAttendance] Classifier returned index ${clfResult.studentIndex} ` +
-            `but no student found at that position in cached list (${sectionStudents.length} students).`
+            `but sectionStudents only has ${sectionStudents.length} entries.`
         );
         continue;
       }
@@ -144,27 +151,27 @@ export const processAttendancePhoto = async (
       let studentId = student.studentId;
       let rollNumber = student.rollNumber;
       let studentName = `${student.firstName} ${student.lastName}`;
-      let confidence = clfResult.confidence;
+      const confidence = clfResult.confidence;
 
-      // Handle Unknown Faces
       if (confidence < 0.45) {
-        status = "MANUAL"; // Needs review
+        // Unknown face — needs manual review
+        status = "MANUAL";
         studentId = `UNKNOWN_${uuidv4()}`;
         rollNumber = -1;
         studentName = "Unknown Student";
       } else if (confidence < 0.6) {
-        status = "MANUAL"; // Found student but needs review
+        // Low confidence — found student but needs review
+        status = "MANUAL";
       }
 
-      // 5. Save the face crop to the device filesystem
-      // Note: for unknown students, rollNumber is -1, which is fine for the filename
+      // 4. Save crop — returns file:// URI ready for <Image>
       const cropImagePath = await saveCropToFilesystem(
         face.cropBase64,
         session.id,
         rollNumber
       );
 
-      // 6. Upsert the attendance record in SQLite
+      // 5. Upsert record in SQLite
       const record: Omit<OfflineAttendanceRecord, "id"> = {
         sessionId: session.id,
         studentId,
@@ -172,8 +179,8 @@ export const processAttendancePhoto = async (
         studentName,
         status,
         confidence,
-        cropImagePath,             // local path — used at sync time to upload crop
-        embeddingVector: embResult.embedding, // 512-dim — uploaded for NN retraining
+        cropImagePath,
+        embeddingVector: embResult.embedding,
         capturedAt: new Date().toISOString(),
         isManualOverride: false,
       };
@@ -183,7 +190,6 @@ export const processAttendancePhoto = async (
 
       onProgress?.(`✓ ${studentName} — ${status}`);
     } catch (err: any) {
-      // In stub mode each face will throw — swallow gracefully during dev
       console.error("[OfflineAttendance] Error processing face:", err.message);
     }
   }
@@ -193,8 +199,8 @@ export const processAttendancePhoto = async (
 
 // ─────────────────────────────────────────────────────────────────
 // finalizeOfflineSession
-// Mark all students not yet detected as ABSENT. Session stays
-// PENDING_SYNC until the sync manager uploads it.
+// Mark all students not yet detected as ABSENT.
+// Session stays PENDING_SYNC until the sync manager uploads it.
 // ─────────────────────────────────────────────────────────────────
 export const finalizeOfflineSession = async (): Promise<void> => {
   const store = useAttendanceStore.getState();
@@ -221,7 +227,6 @@ export const finalizeOfflineSession = async (): Promise<void> => {
     }
   }
 
-  // Session stays PENDING_SYNC — cleared from UI state
   store.clearSession();
 };
 
@@ -242,13 +247,12 @@ export const captureSingleStudentPhoto = async (
     throw new Error("No face detected in the photo. Please try again.");
   }
 
-  // If multiple faces found, just take the largest one (index 0)
+  // Highest-score face is first after NMS sort
   const face = faces[0];
 
-  // Extract 512-dim embedding
   const embResult = await mobileFaceNet.extractEmbedding(face.cropBase64);
 
-  // Save crop
+  // Save crop — returns file:// URI
   const cropImagePath = await saveCropToFilesystem(
     face.cropBase64,
     sessionId,
@@ -259,11 +263,5 @@ export const captureSingleStudentPhoto = async (
     throw new Error("Failed to save the face crop.");
   }
 
-  // Update record in SQLite
-  await updateRecordWithNewPhoto(
-    recordId,
-    cropImagePath,
-    embResult.embedding
-  );
+  await updateRecordWithNewPhoto(recordId, cropImagePath, embResult.embedding);
 };
-
