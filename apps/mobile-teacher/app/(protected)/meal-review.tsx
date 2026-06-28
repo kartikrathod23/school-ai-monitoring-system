@@ -12,6 +12,7 @@ import {
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { getOfflineMealSessionById, updateMealSessionStatus } from "@/src/db/offlineMeal";
 import { syncOfflineMeals } from "@/src/services/syncManager.service";
 import { useAuthStore } from "@/src/store/auth.store";
@@ -76,245 +77,172 @@ export default function MealReviewScreen() {
 
     if (loading || !meal) {
         return (
-            <View className="flex-1 items-center justify-center bg-white">
-                <ActivityIndicator size="large" />
-            </View>
+            <SafeAreaView className="flex-1 bg-[#F4F7FB] justify-center items-center">
+                <ActivityIndicator size="large" color="#4338CA" />
+            </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-[#F4F6FA]">
-
-            <View className="flex-row items-center justify-between bg-[#00A86B] px-4 py-4">
-
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                >
-
-                    <Text className="text-white text-[16px]">
-                        ← Back
-                    </Text>
-
+        <SafeAreaView className="flex-1 bg-[#F4F7FB]">
+            {/* Header Section */}
+            <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
+                <TouchableOpacity onPress={() => router.dismissAll()} className="h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
+                    <Ionicons name="home" size={18} color="#0F172A" />
                 </TouchableOpacity>
 
-                <Text className="text-[19px] font-bold text-white">
-                    Mid-Day Meal Count
-                </Text>
+                <Text className="text-lg font-bold text-[#0F172A]">Review Meal Count</Text>
 
-                <View className="h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white">
+                <View className="h-10 w-10 overflow-hidden rounded-full border border-gray-100 shadow-sm bg-white items-center justify-center">
                     <Image
                         source={require("../../assets/images/uitb-logo.jpg")}
-                        className="h-10 w-10"
+                        className="h-8 w-8"
                         resizeMode="contain"
                     />
                 </View>
-
             </View>
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{
-                    paddingBottom: 40,
-                }}
+                contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
             >
+                {/* Progress / Status Header */}
+                <View className="mb-6">
+                  <View className="flex-row items-center justify-between bg-[#4338CA] px-5 py-4 rounded-3xl shadow-md">
+                    <View>
+                      <Text className="text-white font-bold text-base">Local Inference Result</Text>
+                      <Text className="text-indigo-200 text-xs mt-1">Review AI counting results</Text>
+                    </View>
+                    <View className={`px-3 py-1.5 rounded-full ${meal.status === "SYNCED" ? "bg-green-500/20 border border-green-400" : meal.status === "SYNCING" ? "bg-yellow-500/20 border border-yellow-400" : "bg-white/20 border border-white/30"}`}>
+                      <Text className="text-white font-bold text-[10px]">
+                        {meal.status === "SYNCED" ? "SYNCED" : "OFFLINE"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
 
-                <View className="mx-4 mt-5 rounded-3xl bg-white p-6">
-
+                {/* Main Stats Card */}
+                <View className="rounded-3xl bg-white p-6 shadow-sm border border-gray-100">
                     <View className="items-center">
-
-                        <Text className="text-[#64748B]">
-                            Total Student Count Detected
+                        <Text className="text-[#64748B] font-bold text-sm uppercase tracking-wider">
+                            Total Students Detected
                         </Text>
-
-                        <Text className="mt-3 text-[60px] font-bold text-[#00A86B]">
+                        <Text className="mt-3 text-[72px] font-black text-[#10B981]">
                             {meal.totalDetected}
                         </Text>
-
-                        <Text className="text-[#64748B]">
-                            students for meal calculation
+                        <Text className="text-[#94A3B8] font-medium mt-1">
+                            students counted for meals
                         </Text>
-
                     </View>
 
-                    <View className="mt-8">
-
-                        <View className="flex-row justify-between">
-
-                            <Text className="text-[#475569]">
-                                Confidence Level
-                            </Text>
-
-                            <Text className="font-bold text-[#F59E0B]">
+                    <View className="mt-8 border-t border-gray-100 pt-6">
+                        <View className="flex-row justify-between items-center mb-4">
+                            <View className="flex-row items-center">
+                                <Ionicons name="analytics-outline" size={18} color="#64748B" />
+                                <Text className="text-[#475569] font-semibold ml-2">
+                                    AI Confidence
+                                </Text>
+                            </View>
+                            <Text className="font-bold text-[#F59E0B] bg-amber-50 px-3 py-1 rounded-lg">
                                 88%
                             </Text>
-
                         </View>
 
-                        <View className="mt-3 h-3 rounded-full bg-[#E2E8F0]">
-
-                            <View className="h-3 w-[88%] rounded-full bg-[#F59E0B]" />
-
+                        <View className="flex-row justify-between items-center">
+                            <View className="flex-row items-center">
+                                <Ionicons name="cloud-done-outline" size={18} color="#64748B" />
+                                <Text className="text-[#475569] font-semibold ml-2">
+                                    Sync Status
+                                </Text>
+                            </View>
+                            <Text className={`font-bold px-3 py-1 rounded-lg ${meal.status === 'SYNCED' ? 'text-[#10B981] bg-green-50' : 'text-orange-500 bg-orange-50'}`}>
+                                {meal.status}
+                            </Text>
                         </View>
-
                     </View>
-
                 </View>
 
-                {/* <View className="mx-4 mt-5 rounded-2xl border border-[#CBD5E1] bg-[#F8FAFC] p-5">
-
-                    <Text className="font-bold text-[#2563EB]">
-                        AI Head Count Explanation:
-                    </Text>
-
-                    <View className="mt-4 gap-y-2">
-
-                        <Text className="text-[#475569]">
-                            • AI counted total students in classroom
-                        </Text>
-
-                        <Text className="text-[#475569]">
-                            • No identity matching performed
-                        </Text>
-
-                        <Text className="text-[#475569]">
-                            • Used for meal calculation only
-                        </Text>
-
-                        <Text className="text-[#475569]">
-                            • Different from attendance (which uses face scanning)
-                        </Text>
-
-                    </View>
-
-                </View> */}
-
-                <View className="mx-4 mt-5 rounded-2xl bg-white p-5">
-
-                    <Text className="mb-4 text-[16px] font-bold text-[#334155]">
-                        Quick Reference
-                    </Text>
-
-                    <View className="flex-row justify-between py-2">
-
-                        <Text className="text-[#64748B]">
-                            Meal Count Detected
-                        </Text>
-
-                        <Text className="font-semibold text-[#111827]">
-                            {meal.totalDetected}
-                        </Text>
-
-                    </View>
-
-                    <View className="flex-row justify-between py-2">
-
-                        <Text className="text-[#64748B]">
-                            AI Confidence
-                        </Text>
-
-                        <Text className="font-semibold text-[#111827]">
-                            88%
-                        </Text>
-
-                    </View>
-
-                    <View className="flex-row justify-between py-2">
-
-                        <Text className="text-[#64748B]">
-                            Status
-                        </Text>
-
-                        <Text className="font-semibold text-[#16A34A]">
-                            {meal.status}
-                        </Text>
-
-                    </View>
-
-                </View>
-
-                <View className="mx-4 mt-5 rounded-2xl bg-white p-5">
-
-                    <Text className="mb-4 text-[16px] font-bold text-[#334155]">
-                        Meal Summary
+                <View className="mt-6 rounded-3xl bg-white p-6 shadow-sm border border-gray-100">
+                    <Text className="mb-4 text-base font-bold text-[#334155] flex-row items-center">
+                        <Ionicons name="pie-chart" size={18} color="#4338CA" />
+                        <Text className="ml-2"> Meal Summary</Text>
                     </Text>
 
                     <View className="flex-row gap-x-4">
-
-                        <View className="flex-1 items-center rounded-2xl bg-[#DCFCE7] p-4">
-
-                            <Text className="text-[28px] font-bold text-[#16A34A]">
+                        <View className="flex-1 items-center rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] p-4 shadow-sm">
+                            <Text className="text-3xl font-black text-[#16A34A]">
                                 {meal.totalDetected}
                             </Text>
-
-                            <Text className="text-[#64748B]">
+                            <Text className="text-[#16A34A] font-semibold text-xs mt-1 text-center">
                                 Meals to Prepare
                             </Text>
-
                         </View>
 
-                        <View className="flex-1 items-center rounded-2xl bg-[#DBEAFE] p-4">
-
-                            <Text className="text-[28px] font-bold text-[#2563EB]">
+                        <View className="flex-1 items-center rounded-2xl bg-[#EEF2FF] border border-[#C7D2FE] p-4 shadow-sm">
+                            <Text className="text-3xl font-black text-[#4338CA]">
                                 95%
                             </Text>
-
-                            <Text className="text-[#64748B]">
-                                Of Present Students
+                            <Text className="text-[#4338CA] font-semibold text-xs mt-1 text-center">
+                                Of Present
                             </Text>
-
                         </View>
-
                     </View>
-
                 </View>
 
-                <View className="mt-8 flex-row gap-x-4 px-4">
-
+                <View className="mt-8 mb-4 flex-row gap-x-4">
                     {!fromHistory ? (
                         <>
                             <TouchableOpacity
                                 onPress={() => router.back()}
-                                className="flex-1 rounded-2xl border border-[#CBD5E1] bg-white py-4"
+                                activeOpacity={0.8}
+                                className="flex-1 items-center justify-center rounded-3xl border border-gray-200 bg-white py-5 shadow-sm"
                             >
-                                <Text className="text-center font-bold text-[#475569]">
-                                    Retake Photos
-                                </Text>
+                                <Text className="font-bold text-lg text-[#0F172A]">Retake</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
                                 onPress={confirmMeal}
-                                className="flex-1 rounded-2xl bg-[#16A34A] py-4"
+                                activeOpacity={0.8}
+                                className="flex-1 items-center justify-center rounded-3xl bg-[#4338CA] py-5 shadow-md"
                             >
-                                <Text className="text-center font-bold text-white">
-                                    Confirm Meal Count
-                                </Text>
+                                <Text className="font-bold text-lg text-white">Confirm</Text>
                             </TouchableOpacity>
                         </>
                     ) : meal.status !== "SYNCED" ? (
-                        <TouchableOpacity
-                            disabled={syncing}
-                            onPress={handleManualSync}
-                            className="flex-1 rounded-2xl bg-[#00A86B] py-4 shadow-sm"
-                        >
-                            <Text className="text-center font-bold text-white text-[16px]">
-                                {syncing ? "Syncing..." : "Sync Now"}
-                            </Text>
-                        </TouchableOpacity>
+                        <>
+                            <TouchableOpacity
+                                onPress={() => router.back()}
+                                activeOpacity={0.8}
+                                className="flex-1 items-center justify-center rounded-3xl border border-gray-200 bg-white py-5 shadow-sm"
+                            >
+                                <Text className="font-bold text-lg text-[#0F172A]">Close</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                disabled={syncing}
+                                onPress={handleManualSync}
+                                activeOpacity={0.8}
+                                className="flex-1 items-center justify-center rounded-3xl bg-[#10B981] py-5 shadow-sm"
+                            >
+                                {syncing ? (
+                                    <ActivityIndicator color="white" />
+                                ) : (
+                                    <Text className="font-bold text-lg text-white">Sync Now</Text>
+                                )}
+                            </TouchableOpacity>
+                        </>
                     ) : (
                         <TouchableOpacity
                             onPress={() => router.back()}
-                            className="flex-1 rounded-2xl border border-[#CBD5E1] bg-white py-4"
+                            activeOpacity={0.8}
+                            className="flex-1 items-center justify-center rounded-3xl bg-[#4338CA] py-5 shadow-md"
                         >
-                            <Text className="text-center font-bold text-[#475569]">
-                                Close
-                            </Text>
+                            <Text className="font-bold text-lg text-white">Back to Dashboard</Text>
                         </TouchableOpacity>
                     )}
-
                 </View>
 
                 <View className="mt-8 flex-row items-center justify-center">
-
                     <Text className="text-[13px] text-[#64748B]">
                         Powered by
                     </Text>
@@ -327,7 +255,6 @@ export default function MealReviewScreen() {
                     <Text className="text-[13px] text-[#64748B]">
                         IIIT Vadodara
                     </Text>
-
                 </View>
 
             </ScrollView>

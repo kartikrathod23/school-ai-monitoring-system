@@ -15,6 +15,7 @@
 
 import axios, { AxiosError } from "axios";
 import prisma from "../config/prisma";
+import { processBatchOnboardingForSection } from "./onboarding.service";
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8000";
 const POLL_INTERVAL_MS = 10_000;
@@ -55,7 +56,11 @@ export const processTrainClassifierJob = async (data: any) => {
   });
 
   try {
-    // 1. Start the async training job in ml-service
+    // 1. First, process any pending face onboardings for this section
+    console.log(`[trainer] Processing pending onboardings for section ${data.sectionId}`);
+    await processBatchOnboardingForSection(data.sectionId);
+
+    // 2. Start the async training job in ml-service
     console.log(`[trainer] Starting training via ml-service for section ${data.sectionId}`);
 
     let mlJobId: string;

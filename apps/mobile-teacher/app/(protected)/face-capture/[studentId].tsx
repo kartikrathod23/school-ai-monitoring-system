@@ -9,17 +9,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {CameraView,useCameraPermissions,} from "expo-camera";
-
-import {
-  ArrowLeft,
-  Camera,
-  CircleCheckBig,
-  Info,
-  RotateCcw,
-  Trash2,
-} from "lucide-react-native";
-
+import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Location from "expo-location";
@@ -75,12 +66,12 @@ export default function FaceCaptureScreen() {
 
       await uploadFaceImages(formData);
 
-      Alert.alert("Success","Face onboarding completed");
+      Alert.alert("Success", "Photos saved successfully");
       router.back();
     } catch (error: any) {
       Alert.alert("Upload failed", error?.response?.data?.message ||"Something went wrong");
     } finally {
-      setUploading(false);
+      setUploading(false); 
     }
   };
 
@@ -92,214 +83,127 @@ export default function FaceCaptureScreen() {
     );
   }
 
-  return (
-    <SafeAreaView className="flex-1 bg-[#081120]">
-      {/* HEADER */}
-      <View className="h-16 flex-row items-center justify-between bg-[#111827] px-4">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="flex-row items-center"
-        >
-          <ArrowLeft
-            size={20}
-            color="white"
-          />
+    return (
+        <SafeAreaView className="flex-1 bg-[#F4F7FB]">
+            {/* Header Section */}
+            <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
+                <TouchableOpacity onPress={() => router.back()} className="h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
+                    <Ionicons name="arrow-back" size={20} color="#0F172A" />
+                </TouchableOpacity>
 
-          <Text className="ml-2 text-base text-white">
-            Back
-          </Text>
-        </TouchableOpacity>
+                <Text className="text-lg font-bold text-[#0F172A]">{studentName}</Text>
 
-        <Text className="text-lg font-bold text-white">
-          Student Face Capture
-        </Text>
-
-            <View className="h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white">
-                <Image
-                    source={require("../../../assets/images/uitb-logo.jpg")}
-                    className="h-10 w-10"
-                    resizeMode="contain"
-                />
-            </View>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-      >
-        {/* TOP */}
-        <LinearGradient
-          colors={["#C026D3", "#2563EB"]}
-          className="px-4 pb-5 pt-4"
-        >
-          <Text className="text-2xl font-bold text-white">
-            {studentName}
-          </Text>
-
-          <Text className="mt-1 text-sm text-purple-100">
-            Face Onboarding - One Student at a Time
-          </Text>
-
-          <View className="mt-4 rounded-xl bg-[#A21CAF] px-4 py-3">
-            <Text className="text-center text-white">
-              {images.length}/10 images captured
-            </Text>
-          </View>
-        </LinearGradient>
-
-        {/* GUIDELINES */}
-        <View className="bg-[#2563EB] px-4 py-5">
-          <View className="flex-row items-center">
-            <Info
-              size={18}
-              color="white"
-            />
-
-            <Text className="ml-2 text-lg font-bold text-white">
-              Face Capture Guidelines
-            </Text>
-          </View>
-
-          <Text className="mt-4 text-sm leading-7 text-white">
-            • Click at least 5 clear face images{"\n"}
-            • Student should look at camera{"\n"}
-            • Different angles recommended{"\n"}
-            • Remove masks if possible{"\n"}
-            • Use good lighting{"\n"}
-            • In-app camera only
-          </Text>
-        </View>
-
-        {/* CAMERA */}
-        <View className="px-4 py-5">
-          <View className="overflow-hidden rounded-[28px] border border-[#334155]">
-            <CameraView
-              ref={cameraRef}
-              style={{
-                height: 430,
-              }}
-
-              facing="back"
-            />
-          </View>
-
-          <View className="mt-4 items-center">
-            <Text className="text-lg font-semibold text-white">
-              {images.length === 0
-                ? "No images captured yet"
-                : `${images.length} images captured`}
-            </Text>
-          </View>
-        </View>
-
-        {/* IMAGE LIST */}
-        {images.length > 0 && (
-          <View className="px-4">
-            <Text className="mb-4 text-base font-semibold text-white">
-              Captured Images
-            </Text>
-
-            <ScrollView horizontal>
-              {images.map((uri, index) => (
-                <View
-                  key={index}
-                  className="mr-3"
-                >
-                  <Image
-                    source={{ uri }}
-                    className="h-24 w-24 rounded-2xl"
-                  />
-
-                  <TouchableOpacity
-                    onPress={() =>
-                      removeImage(index)
-                    }
-                    className="absolute right-1 top-1 h-7 w-7 items-center justify-center rounded-full bg-red-500"
-                  >
-                    <Trash2
-                      size={15}
-                      color="white"
+                <View className="h-10 w-10 overflow-hidden rounded-full border border-gray-100 shadow-sm bg-white items-center justify-center">
+                    <Image
+                        source={require("../../../assets/images/uitb-logo.jpg")}
+                        className="h-8 w-8"
+                        resizeMode="contain"
                     />
-                  </TouchableOpacity>
                 </View>
-              ))}
+            </View>
+
+            <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+                
+                {/* Progress / Status Header */}
+                <View className="px-5 mt-2 mb-4">
+                  <View className="flex-row items-center justify-between bg-[#4338CA] px-5 py-4 rounded-2xl shadow-sm">
+                    <View>
+                      <Text className="text-white font-bold text-base">Face Onboarding</Text>
+                      <Text className="text-indigo-200 text-xs mt-1">Capture at least 5 clear images</Text>
+                    </View>
+                    <View className="bg-white/20 px-3 py-1.5 rounded-full">
+                      <Text className="text-white font-bold text-sm">{images.length}/10</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Camera View */}
+                <View className="px-5">
+                    <View className="overflow-hidden rounded-3xl bg-white shadow-sm border border-gray-200">
+                        <CameraView
+                            ref={cameraRef}
+                            style={{ height: 400 }}
+                            facing={"back" as CameraType}
+                        />
+                    </View>
+                </View>
+
+                {/* Captured Photos Section */}
+                <View className="px-5 mt-8">
+                    <View className="flex-row items-center justify-between mb-4">
+                        <Text className="text-base font-bold text-[#0F172A]">
+                            Captured Photos
+                        </Text>
+                        <View className="bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                            <Text className="text-indigo-700 font-bold text-xs">{images.length} / 10</Text>
+                        </View>
+                    </View>
+
+                    {images.length === 0 ? (
+                        <View className="h-24 items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50">
+                            <Ionicons name="images-outline" size={24} color="#9CA3AF" />
+                            <Text className="mt-2 text-sm text-gray-400 font-medium">No photos captured yet</Text>
+                        </View>
+                    ) : (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-2">
+                            {images.map((uri, index) => (
+                                <View key={index} className="mr-4 relative">
+                                    <Image source={{ uri }} className="h-24 w-24 rounded-2xl border border-gray-200" />
+                                    <TouchableOpacity
+                                        onPress={() => removeImage(index)}
+                                        className="absolute -right-2 -top-2 h-7 w-7 rounded-full bg-red-500 border-2 border-white items-center justify-center shadow-sm"
+                                    >
+                                        <Ionicons name="close" size={14} color="white" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    )}
+
+                    {/* Action Buttons: Camera Style */}
+                    <View className="mt-8 flex-row items-center justify-between px-6 pb-6">
+                        {/* Reset / Retake Button */}
+                        <View className="w-16">
+                            {images.length > 0 && (
+                              <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  onPress={() => setImages([])}
+                                  className="h-12 w-12 items-center justify-center rounded-full bg-gray-100 border border-gray-200"
+                              >
+                                  <Ionicons name="refresh-outline" size={20} color="#475569" />
+                              </TouchableOpacity>
+                            )}
+                        </View>
+                        
+                        {/* Round Shutter Button */}
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={captureImage}
+                            className="h-20 w-20 items-center justify-center rounded-full bg-white border-[6px] border-gray-200 shadow-md"
+                        >
+                            <View className="h-[68px] w-[68px] rounded-full bg-white border border-gray-100 shadow-sm" />
+                        </TouchableOpacity>
+
+                        {/* Process Tick Mark Button */}
+                        <View className="w-16 items-end">
+                            {images.length >= 5 && (
+                                <TouchableOpacity
+                                    disabled={uploading}
+                                    activeOpacity={0.7}
+                                    onPress={submitImages}
+                                    className="h-16 w-16 items-center justify-center rounded-full bg-[#10B981] shadow-lg"
+                                >
+                                    {uploading ? (
+                                        <ActivityIndicator color="white" size="small" />
+                                    ) : (
+                                        <Ionicons name="checkmark-sharp" size={32} color="white" />
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+                </View>
             </ScrollView>
-          </View>
-        )}
-
-        {/* BUTTONS */}
-        <View className="px-4 pb-8 pt-6">
-          <View className="flex-row gap-x-3">
-            <TouchableOpacity
-              onPress={() => setImages([])}
-              className="flex-1 flex-row items-center justify-center rounded-2xl bg-[#374151] py-4"
-            >
-              <RotateCcw
-                size={18}
-                color="white"
-              />
-
-              <Text className="ml-2 font-semibold text-white">
-                Retake
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              disabled={
-                images.length < 5 || uploading
-              }
-
-              onPress={submitImages}
-
-              className="flex-1 flex-row items-center justify-center rounded-2xl bg-[#16A34A] py-4"
-            >
-              {uploading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <>
-                  <CircleCheckBig
-                    size={18}
-                    color="white"
-                  />
-
-                  <Text className="ml-2 font-semibold text-white">
-                    Submit
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            onPress={captureImage}
-            className="mt-4 flex-row items-center justify-center rounded-2xl bg-[#C026D3] py-5"
-          >
-            <Camera
-              size={20}
-              color="white"
-            />
-
-            <Text className="ml-2 text-lg font-semibold text-white">
-              Capture Face Image
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* FOOTER */}
-        <View className="mb-6 flex-row items-center justify-center">
-          <Text className="mr-2 text-sm text-[#94A3B8]">
-            Powered by
-          </Text>
-
-          <Image
-            source={require("../../../assets/images/iiitv-logo.png")}
-            className="h-6 w-6"
-          />
-
-          <Text className="ml-2 text-sm text-[#CBD5E1]">
-            IIIT Vadodara
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </SafeAreaView>
   );
 }

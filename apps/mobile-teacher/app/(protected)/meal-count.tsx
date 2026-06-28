@@ -11,9 +11,10 @@ import {
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import * as Location from "expo-location";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import { createOfflineMealSession } from "@/src/db/offlineMeal";
 import { faceDetector } from "@/src/ml/faceDetector";
@@ -113,203 +114,110 @@ export default function MealCountScreen() {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-[#091222]">
-            <View className="flex-row items-center justify-between bg-[#091222] px-4 py-4">
-
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                >
-
-                    <Text className="text-white text-[17px]">
-                        ← Back
-                    </Text>
-
+        <SafeAreaView className="flex-1 bg-[#F4F7FB]">
+            {/* Header Section */}
+            <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
+                <TouchableOpacity onPress={() => router.back()} className="h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
+                    <Ionicons name="arrow-back" size={20} color="#0F172A" />
                 </TouchableOpacity>
 
-                <Text className="text-[20px] font-bold text-white">
-                    Meal Count Capture
-                </Text>
+                <Text className="text-lg font-bold text-[#0F172A]">Meal Count</Text>
 
-                <View className="h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white">
+                <View className="h-10 w-10 overflow-hidden rounded-full border border-gray-100 shadow-sm bg-white items-center justify-center">
                     <Image
                         source={require("../../assets/images/uitb-logo.jpg")}
-                        className="h-10 w-10"
+                        className="h-8 w-8"
                         resizeMode="contain"
                     />
                 </View>
-
             </View>
 
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{
-                    paddingBottom: 40,
-                }}
-            >
+            <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+                
+                <View className="pt-4" />
 
-                <View className="bg-[#00A86B] px-5 py-5">
-
-                    <Text className="text-[18px] font-bold text-white">
-                        Head Count for Meal Calculation
-                    </Text>
-
-                    <View className="mt-4 gap-y-2">
-
-                        <Text className="text-white">
-                            • Click at least one classroom photos
-                        </Text>
-
-                        <Text className="text-white">
-                            • You can click multiple pictures, but ensure one student appears in at most one picture
-                        </Text>
-
-                        <Text className="text-white">
-                            • Ensure all students are visible
-                        </Text>
-
-                        <Text className="text-white">
-                            • Use good lighting
-                        </Text>
-
-                        <Text className="text-white">
-                            • Hold camera steady
-                        </Text>
-
-
+                {/* Camera View */}
+                <View className="px-5">
+                    <View className="overflow-hidden rounded-3xl bg-white shadow-sm border border-gray-200">
+                        <CameraView
+                            ref={cameraRef}
+                            style={{ height: 400 }}
+                            facing={"back" as CameraType}
+                        />
                     </View>
                 </View>
 
-                {/* <View className="bg-[#1B2740] px-4 py-3">
-
-                    <Text className="text-[#D1D5DB] text-[14px]">
-                        AI will count total students for meal calculation (no identity)
-                    </Text>
-
-                </View> */}
-
-                <View className="mx-4 mt-5 overflow-hidden rounded-3xl border border-[#475569]">
-
-                    <CameraView
-                        ref={cameraRef}
-                        style={{
-                            height: 380,
-                        }}
-                        facing="back"
-                    />
-
-                </View>
-
-                <Text className="mt-5 text-center text-[20px] font-bold text-white">
-
-                    {images.length === 0
-                        ? "No images captured yet"
-                        : `${images.length} images captured`}
-
-                </Text>
-
-                {images.length > 0 && (
-
-                    <View className="mt-5">
-
-                        <Text className="mb-3 px-4 text-base font-semibold text-white">
-                            Captured Photos:
+                {/* Captured Photos Section */}
+                <View className="px-5 mt-8">
+                    <View className="flex-row items-center justify-between mb-4">
+                        <Text className="text-base font-bold text-[#0F172A]">
+                            Captured Photos
                         </Text>
+                        <View className="bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                            <Text className="text-indigo-700 font-bold text-xs">{images.length} / 10</Text>
+                        </View>
+                    </View>
 
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            className="px-4"
-                        >
-
+                    {images.length === 0 ? (
+                        <View className="h-24 items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50">
+                            <Ionicons name="images-outline" size={24} color="#9CA3AF" />
+                            <Text className="mt-2 text-sm text-gray-400 font-medium">No photos captured yet</Text>
+                        </View>
+                    ) : (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-2">
                             {images.map((uri, index) => (
-
-                                <View
-                                    key={index}
-                                    className="mr-3"
-                                >
-
-                                    <Image
-                                        source={{ uri: "data:image/jpeg;base64," + uri }}
-                                        className="h-28 w-24 rounded-2xl"
-                                    />
-
+                                <View key={index} className="mr-4 relative">
+                                    <Image source={{ uri: "data:image/jpeg;base64," + uri }} className="h-24 w-24 rounded-2xl border border-gray-200" />
                                     <TouchableOpacity
-                                        onPress={() =>
-                                            removeImage(index)
-                                        }
-                                        className="mt-2 rounded-xl bg-red-500 py-2"
+                                        onPress={() => removeImage(index)}
+                                        className="absolute -right-2 -top-2 h-7 w-7 rounded-full bg-red-500 border-2 border-white items-center justify-center shadow-sm"
                                     >
-
-                                        <Text className="text-center text-xs font-semibold text-white">
-                                            Delete
-                                        </Text>
-
+                                        <Ionicons name="close" size={14} color="white" />
                                     </TouchableOpacity>
-
                                 </View>
                             ))}
-
                         </ScrollView>
+                    )}
 
+                    {/* Action Buttons: Camera Style */}
+                    <View className="mt-8 flex-row items-center justify-between px-6 pb-6">
+                        <View className="w-16 h-16" />
+                        
+                        {/* Round Shutter Button */}
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={capturePhoto}
+                            className="h-20 w-20 items-center justify-center rounded-full bg-white border-[6px] border-gray-200 shadow-md"
+                        >
+                            <View className="h-[68px] w-[68px] rounded-full bg-white border border-gray-100 shadow-sm" />
+                        </TouchableOpacity>
+
+                        {/* Process Tick Mark Button */}
+                        <View className="w-16 items-end">
+                            {images.length > 0 && (
+                                <TouchableOpacity
+                                    disabled={uploading}
+                                    activeOpacity={0.7}
+                                    onPress={submitMeal}
+                                    className="h-16 w-16 items-center justify-center rounded-full bg-[#10B981] shadow-lg"
+                                >
+                                    {uploading ? (
+                                        <ActivityIndicator color="white" size="small" />
+                                    ) : (
+                                        <Ionicons name="checkmark-sharp" size={32} color="white" />
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </View>
-                )}
 
-                <View className="mt-6 px-4">
-
-                    <TouchableOpacity
-                        onPress={capturePhoto}
-                        className="rounded-2xl bg-[#00A86B] py-4"
-                    >
-
-                        <Text className="text-center text-[16px] font-bold text-white">
-                            Capture Photo
-                        </Text>
-
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        disabled={
-                            images.length < 1 ||
-                            uploading
-                        }
-                        onPress={submitMeal}
-                        className={`mt-4 rounded-2xl py-4 ${images.length < 1
-                                ? "bg-gray-600"
-                                : "bg-[#16A34A]"
-                            }`}
-                    >
-
-                        <Text className="text-center text-[16px] font-bold text-white">
-
-                            {uploading
-                                ? progressText || "AI Processing Meal Count..."
-                                : `Submit for Processing (${images.length} images)`}
-
-                        </Text>
-
-                    </TouchableOpacity>
-
+                    {uploading && progressText && (
+                         <Text className="text-center text-sm font-semibold text-[#64748B] mt-2 mb-4">
+                             {progressText}
+                         </Text>
+                    )}
                 </View>
-
-                <View className="mt-8 flex-row items-center justify-center">
-
-                    <Text className="text-[13px] text-[#CBD5E1]">
-                        Powered by
-                    </Text>
-
-                    <Image
-                        source={require("@/assets/images/iiitv-logo.png")}
-                        className="mx-2 h-6 w-6 rounded-full"
-                    />
-
-                    <Text className="text-[13px] text-[#CBD5E1]">
-                        IIIT Vadodara
-                    </Text>
-
-                </View>
-
             </ScrollView>
-
         </SafeAreaView>
     );
 }

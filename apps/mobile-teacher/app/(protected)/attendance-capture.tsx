@@ -162,95 +162,107 @@ export default function AttendanceCaptureScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0B1220]">
-      <View className="flex-row items-center justify-between bg-[#172033] px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
-          <Ionicons name="arrow-back" size={18} color="white" />
-          <Text className="ml-1 text-white"> Back</Text>
+    <SafeAreaView className="flex-1 bg-[#F4F7FB]">
+      {/* Header Section */}
+      <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
+        <TouchableOpacity onPress={() => router.back()} className="h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
+          <Ionicons name="arrow-back" size={20} color="#0F172A" />
         </TouchableOpacity>
 
-        <Text className="text-lg font-bold text-white"> Attendance Capture</Text>
+        <Text className="text-lg font-bold text-[#0F172A]">Attendance</Text>
 
-        <View className="h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white">
+        <View className="h-10 w-10 overflow-hidden rounded-full border border-gray-100 shadow-sm bg-white items-center justify-center">
           <Image
             source={require("../../assets/images/uitb-logo.jpg")}
-            className="h-10 w-10"
+            className="h-8 w-8"
             resizeMode="contain"
           />
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        <View className="bg-[#2563EB] px-4 py-4">
-          <View className="flex-row items-center">
-            <Ionicons name="information-circle-outline" size={18} color="white" />
-            <Text className="ml-2 text-base font-semibold text-white"> On-Device Face Scanning</Text>
-          </View>
-          <Text className="mt-3 text-sm text-white">Capture group photos for offline processing.</Text>
-          <Text className="mt-1 text-sm text-white">• Photos are processed locally on your phone</Text>
-          <Text className="mt-1 text-sm text-white">• No internet required</Text>
-        </View>
-
-        <View className="px-4 pt-5">
-          <View className="overflow-hidden rounded-3xl border border-[#334155] bg-[#1E293B]">
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        
+        <View className="pt-4" />
+        {/* Camera View */}
+        <View className="px-5">
+          <View className="overflow-hidden rounded-3xl bg-white shadow-sm border border-gray-200">
             <CameraView
               ref={cameraRef}
-              style={{ height: 380 }}
+              style={{ height: 400 }}
               facing={"back" as CameraType}
             />
           </View>
+        </View>
 
-          <Text className="mt-5 text-center text-xl font-semibold text-white">
-            {images.length === 0
-              ? "No images captured yet"
-              : `${images.length} images captured`}
-          </Text>
+        {/* Captured Photos Section */}
+        <View className="px-5 mt-8">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-base font-bold text-[#0F172A]">
+              Captured Photos
+            </Text>
+            <View className="bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+              <Text className="text-indigo-700 font-bold text-xs">{images.length} / 10</Text>
+            </View>
+          </View>
 
-          {images.length > 0 && (
-            <>
-              <Text className="mt-5 text-sm font-semibold text-white">Captured Photos:</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3">
-                {images.map((img, index) => (
-                  <View key={index} className="mr-3">
-                    <Image source={{ uri: img.uri }} className="h-20 w-20 rounded-xl" />
-                    <TouchableOpacity
-                      onPress={() => deletePhoto(index)}
-                      className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1"
-                    >
-                      <Ionicons name="close" size={12} color="white" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-            </>
+          {images.length === 0 ? (
+            <View className="h-24 items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50">
+              <Ionicons name="images-outline" size={24} color="#9CA3AF" />
+              <Text className="mt-2 text-sm text-gray-400 font-medium">No photos captured yet</Text>
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-2">
+              {images.map((img, index) => (
+                <View key={index} className="mr-4 relative">
+                  <Image source={{ uri: img.uri }} className="h-24 w-24 rounded-2xl border border-gray-200" />
+                  <TouchableOpacity
+                    onPress={() => deletePhoto(index)}
+                    className="absolute -right-2 -top-2 h-7 w-7 rounded-full bg-red-500 border-2 border-white items-center justify-center shadow-sm"
+                  >
+                    <Ionicons name="close" size={14} color="white" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
           )}
 
-          <TouchableOpacity
-            onPress={capturePhoto}
-            className="mt-6 h-14 flex-row items-center justify-center rounded-2xl bg-[#2563EB]"
-          >
-            <Ionicons name="camera-outline" size={22} color="white" />
-            <Text className="ml-2 text-base font-semibold text-white">Capture Photo</Text>
-          </TouchableOpacity>
+          {/* Action Buttons: Camera Style */}
+          <View className="mt-8 flex-row items-center justify-between px-6 pb-6">
+            <View className="w-16 h-16" />
+            
+            {/* Round Shutter Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={capturePhoto}
+              className="h-20 w-20 items-center justify-center rounded-full bg-white border-[6px] border-gray-200 shadow-md"
+            >
+              <View className="h-[68px] w-[68px] rounded-full bg-white border border-gray-100 shadow-sm" />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            disabled={images.length < 1 || processing}
-            onPress={runLocalInference}
-            className={`mt-4 h-14 items-center justify-center rounded-2xl ${
-              images.length >= 1 ? "bg-[#16A34A]" : "bg-gray-600"
-            }`}
-          >
-            {processing ? (
-              <View className="flex-row items-center">
-                <ActivityIndicator color="white" />
-                <Text className="ml-2 text-base font-semibold text-white">{progressText || "Processing locally..."}</Text>
-              </View>
-            ) : (
-              <Text className="text-base font-semibold text-white">
-                Process Attendance Locally ({images.length} images)
-              </Text>
-            )}
-          </TouchableOpacity>
+            {/* Process Tick Mark Button */}
+            <View className="w-16 items-end">
+              {images.length > 0 && (
+                <TouchableOpacity
+                  disabled={processing}
+                  activeOpacity={0.7}
+                  onPress={runLocalInference}
+                  className="h-16 w-16 items-center justify-center rounded-full bg-[#10B981] shadow-lg"
+                >
+                  {processing ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Ionicons name="checkmark-sharp" size={32} color="white" />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {processing && progressText && (
+             <Text className="text-center text-sm font-semibold text-[#64748B] mt-2 mb-4">
+               {progressText}
+             </Text>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

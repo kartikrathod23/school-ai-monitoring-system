@@ -85,37 +85,16 @@ export const createFaceOnboardingService = async (
     });
   }
 
-  const mlJob =await prisma.mlProcessingJob.create({
-    data: {
-      onboardingSessionId: onboarding.id,
-      jobType:"FACE_EMBEDDING_GENERATION",
-      status: "PENDING",
-    },
-  });
-
-  await mlQueue.add( "FACE_EMBEDDING_GENERATION",
-    {
-      mlJobId: mlJob.id,
-      onboardingSessionId: onboarding.id,
-      studentId: student.id,
-    },
-
-    {
-      attempts: 3,
-      removeOnComplete: 50,
-      removeOnFail: false,
-    }
-  );
-
   await prisma.student.update({
     where: {
       id: student.id,
     },
-
     data: {
       faceStatus: "PENDING",
     },
   });
 
   return onboarding;
+
+  // Duplicate removed
 };

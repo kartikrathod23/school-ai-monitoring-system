@@ -73,127 +73,101 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        {/* HEADER */}
-        <View className="h-16 flex-row items-center justify-end bg-[#2563EB] px-4">
-          <View className="h-11 w-11 overflow-hidden rounded-full bg-white items-center justify-center">
-            <Image
-              source={require("../../assets/images/uitb-logo.jpg")}
-              className="h-10 w-10"
-              resizeMode="contain"
-            />
-          </View>
-        </View>
-
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
             justifyContent: "center",
-            padding: 20,
+            padding: 24,
           }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* CARD */}
-          <View className="rounded-[28px] bg-white p-6 shadow-sm">
-            {/* ICON */}
-            <View className="items-center">
-              <View className="h-20 w-20 items-center justify-center rounded-full bg-[#2563EB]">
-                <Text className="text-[34px] text-white">
-                  👨‍🏫
-                </Text>
-              </View>
-
-              <Text className="mt-5 text-[30px] font-bold text-[#1E293B]">
-                Teacher Login
-              </Text>
-
-              <Text className="mt-2 text-center text-[15px] text-[#64748B]">
-                Daily Attendance & Meal Recording
-              </Text>
+          {/* LOGO AREA */}
+          <View className="items-center mb-10 mt-4">
+            <View className="h-28 w-28 overflow-hidden rounded-[2rem] border-4 border-white shadow-lg bg-white items-center justify-center">
+              <Image
+                source={require("../../assets/images/uitb-logo.jpg")}
+                className="h-24 w-24"
+                resizeMode="contain"
+              />
             </View>
+            <Text className="mt-6 text-[32px] font-extrabold text-[#0F172A]">
+              Welcome Back
+            </Text>
+            <Text className="mt-2 text-base font-medium text-[#64748B]">
+              Sign in to manage your classroom
+            </Text>
+          </View>
 
+          {/* CARD */}
+          <View className="rounded-3xl bg-white p-6 shadow-sm border border-gray-100">
             {/* ID */}
-            <View className="mt-8">
-              <Text className="mb-2 text-sm font-medium text-[#475569]">
+            <View className="mb-5">
+              <Text className="mb-2 text-sm font-bold text-[#475569]">
                 Teacher ID / Mobile
               </Text>
-
               <TextInput
                 value={identifier}
                 onChangeText={setIdentifier}
-                placeholder="Enter your ID or mobile number"
+                placeholder="Enter your ID or mobile"
                 placeholderTextColor="#94A3B8"
-                className="h-14 rounded-xl border border-[#D7DFEA] bg-[#F8FAFC] px-4 text-base text-black"
+                className="h-14 rounded-2xl border border-gray-200 bg-gray-50 px-4 text-base text-[#0F172A]"
+                autoCapitalize="none"
               />
             </View>
 
             {/* PASSWORD */}
-            <View className="mt-5">
-              <Text className="mb-2 text-sm font-medium text-[#475569]">
+            <View className="mb-2">
+              <Text className="mb-2 text-sm font-bold text-[#475569]">
                 Password
               </Text>
-
               <TextInput
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
                 placeholder="Enter your password"
                 placeholderTextColor="#94A3B8"
-                className="h-14 rounded-xl border border-[#D7DFEA] bg-[#F8FAFC] px-4 text-base text-black"
+                className="h-14 rounded-2xl border border-gray-200 bg-gray-50 px-4 text-base text-[#0F172A]"
               />
+            </View>
+
+            {/* FORGOT */}
+            <View className="flex-row justify-end mb-6">
+              <TouchableOpacity>
+                <Text className="text-sm font-bold text-[#4338CA]">
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* BUTTON */}
             <TouchableOpacity
               disabled={loading}
               onPress={handleLogin}
-              className="mt-7 h-14 items-center justify-center rounded-xl bg-[#2563EB]"
+              activeOpacity={0.8}
+              className="h-14 flex-row items-center justify-center rounded-2xl bg-[#4338CA] shadow-sm"
             >
               {loading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text className="text-lg font-semibold text-white">
-                  Login
+                <Text className="text-lg font-bold text-white">
+                  Sign In
                 </Text>
               )}
             </TouchableOpacity>
-
-            {/* FORGOT */}
-            <TouchableOpacity className="mt-5 items-center">
-              <Text className="text-sm text-[#2563EB]">
-                Forgot Password?
-              </Text>
-            </TouchableOpacity>
-
-            {/* DIVIDER */}
-            <View className="my-6 h-px bg-[#E2E8F0]" />
-
-            {/* INFO */}
-            <View className="rounded-2xl bg-[#EEF4FF] p-4">
-              <Text className="text-sm font-bold text-[#1D4ED8]">
-                Role: Teacher
-              </Text>
-
-              <Text className="mt-1 text-sm leading-5 text-[#2563EB]">
-                You can mark attendance and record meal counts
-                for your assigned classes only.
-              </Text>
-            </View>
           </View>
 
           {/* FOOTER */}
-          <View className="mt-8 flex-row items-center justify-center">
-            <Text className="mr-2 text-sm text-[#64748B]">
+          <View className="mt-12 mb-6 flex-row items-center justify-center">
+            <Text className="mr-2 text-sm font-medium text-[#94A3B8]">
               Powered by
             </Text>
-
             <Image
               source={require("../../assets/images/iiitv-logo.png")}
-              className="h-6 w-6"
+              className="h-6 w-6 opacity-80"
               resizeMode="contain"
             />
-
-            <Text className="ml-2 text-sm font-medium text-[#475569]">
+            <Text className="ml-2 text-sm font-bold text-[#64748B]">
               IIIT Vadodara
             </Text>
           </View>

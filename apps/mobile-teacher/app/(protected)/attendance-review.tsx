@@ -178,50 +178,62 @@ export default function AttendanceReviewScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#F4F7FB]">
-      <View className="flex-row items-center justify-between bg-[#2563EB] px-4 py-3">
-        <TouchableOpacity onPress={() => router.dismissAll()} className="flex-row items-center">
-          <Ionicons name="home" size={18} color="white" />
-          <Text className="ml-1 text-white"> Home</Text>
-        </TouchableOpacity>
+      {/* Header Section */}
+      <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
+          <TouchableOpacity onPress={() => router.dismissAll()} className="h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
+              <Ionicons name="home" size={18} color="#0F172A" />
+          </TouchableOpacity>
 
-        <Text className="text-lg font-bold text-white">Review Attendance</Text>
+          <Text className="text-lg font-bold text-[#0F172A]">Review Attendance</Text>
 
-        <View className="h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white">
-          <Image source={require("../../assets/images/uitb-logo.jpg")} className="h-10 w-10" resizeMode="contain" />
-        </View>
+          <View className="h-10 w-10 overflow-hidden rounded-full border border-gray-100 shadow-sm bg-white items-center justify-center">
+              <Image
+                  source={require("../../assets/images/uitb-logo.jpg")}
+                  className="h-8 w-8"
+                  resizeMode="contain"
+              />
+          </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <View className="rounded-3xl bg-[#2563EB] p-4">
-          <View className="flex-row justify-between items-center">
-            <Text className="text-white">Local Inference Result</Text>
-            <View className={`px-2 py-1 rounded-full ${session.status === "SYNCED" ? "bg-green-400" : session.status === "SYNCING" ? "bg-yellow-400" : "bg-red-400"}`}>
-              <Text className="text-xs font-bold text-white">
-                {session.status === "SYNCED" ? "Synced" : "Offline"}
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        
+        {/* Progress / Status Header */}
+        <View className="mb-6">
+          <View className="flex-row items-center justify-between bg-[#4338CA] px-5 py-4 rounded-3xl shadow-md">
+            <View>
+              <Text className="text-white font-bold text-base">Local Inference Result</Text>
+              <Text className="text-indigo-200 text-xs mt-1">Review the AI processing results</Text>
+            </View>
+            <View className={`px-3 py-1.5 rounded-full ${session.status === "SYNCED" ? "bg-green-500/20 border border-green-400" : session.status === "SYNCING" ? "bg-yellow-500/20 border border-yellow-400" : "bg-white/20 border border-white/30"}`}>
+              <Text className="text-white font-bold text-[10px]">
+                {session.status === "SYNCED" ? "SYNCED" : "OFFLINE"}
               </Text>
             </View>
           </View>
 
-          <View className="mt-4 flex-row justify-between">
-            <View className="w-[31%] rounded-2xl bg-[#4F7EFF] py-4">
-              <Text className="text-center text-2xl font-bold text-white">{enrolledRecords.length}</Text>
-              <Text className="text-center text-white">Total</Text>
+          <View className="mt-6 flex-row justify-between px-2">
+            <View className="w-[30%] aspect-square rounded-full bg-white border border-gray-100 items-center justify-center shadow-sm">
+              <Text className="text-3xl font-black text-[#4338CA]">{enrolledRecords.length}</Text>
+              <Text className="text-[#64748B] text-xs font-semibold mt-1">Total</Text>
             </View>
 
-            <View className="w-[31%] rounded-2xl bg-[#10B981] py-4">
-              <Text className="text-center text-2xl font-bold text-white">{present.length}</Text>
-              <Text className="text-center text-white">Present</Text>
+            <View className="w-[30%] aspect-square rounded-full bg-[#F0FDF4] border border-[#BBF7D0] items-center justify-center shadow-sm">
+              <Text className="text-3xl font-black text-[#16A34A]">{present.length}</Text>
+              <Text className="text-[#16A34A] text-xs font-semibold mt-1">Present</Text>
             </View>
 
-            <View className="w-[31%] rounded-2xl bg-[#F59E0B] py-4">
-              <Text className="text-center text-2xl font-bold text-white">{absent.length}</Text>
-              <Text className="text-center text-white">Absent</Text>
+            <View className="w-[30%] aspect-square rounded-full bg-[#FEF2F2] border border-[#FECACA] items-center justify-center shadow-sm">
+              <Text className="text-3xl font-black text-[#DC2626]">{absent.length}</Text>
+              <Text className="text-[#DC2626] text-xs font-semibold mt-1">Absent</Text>
             </View>
           </View>
         </View>
 
-        <Text className="mt-5 text-lg font-semibold text-[#111827]">Students Review</Text>
-        <Text className="mb-2 text-sm text-gray-500">Tap a name to correct mapping. Tap a blank photo to take a picture.</Text>
+        <View className="flex-row items-center mt-5 mb-4 px-2">
+          <Ionicons name="people" size={20} color="#4338CA" />
+          <Text className="text-lg font-bold text-[#0F172A] ml-2">Students Review</Text>
+        </View>
+        <Text className="mb-4 text-xs font-medium text-[#64748B] px-2">Tap a name to correct mapping. Tap a blank photo to take a picture.</Text>
 
         {sortedRecords.map((record) => {
           const isPresentOrManual = record.status === "PRESENT" || record.status === "MANUAL";
@@ -231,10 +243,10 @@ export default function AttendanceReviewScreen() {
           return (
             <View
               key={record.id}
-              className={`mt-4 flex-row items-center rounded-2xl border p-4 ${
-                isUnknown ? "border-[#FCA5A5] bg-[#FEF2F2]" :
-                isPresentOrManual ? "border-[#BBF7D0] bg-[#F0FDF4]" : 
-                "border-[#E5E7EB] bg-white"
+              className={`mb-4 flex-row items-center rounded-3xl border p-4 shadow-sm ${
+                isUnknown ? "border-red-200 bg-red-50" :
+                isPresentOrManual ? "border-green-200 bg-[#F0FDF4]" : 
+                "border-gray-200 bg-white"
               }`}
             >
               {/* LEFT: PHOTO */}
@@ -249,15 +261,16 @@ export default function AttendanceReviewScreen() {
                     }
                   }
                 }}
-                className="mr-4"
+                activeOpacity={isAbsent ? 0.7 : 1}
+                className="mr-4 shadow-sm"
               >
                 {record.cropImagePath ? (
                   <Image 
                     source={{ uri: record.cropImagePath }} 
-                    className="w-16 h-16 rounded-xl border border-gray-300" 
+                    className="w-16 h-16 rounded-2xl border border-gray-200" 
                   />
                 ) : (
-                  <View className="w-16 h-16 rounded-xl border border-dashed border-gray-400 bg-gray-50 items-center justify-center">
+                  <View className="w-16 h-16 rounded-2xl border border-dashed border-gray-300 bg-gray-100 items-center justify-center">
                     <Ionicons name="camera" size={24} color="#9CA3AF" />
                   </View>
                 )}
@@ -267,18 +280,18 @@ export default function AttendanceReviewScreen() {
               <View className="flex-1">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
-                    <Text className={`font-bold ${isUnknown ? "text-red-600" : "text-[#111827]"} text-base`} numberOfLines={1}>
+                    <Text className={`font-bold ${isUnknown ? "text-red-600" : "text-[#0F172A]"} text-base`} numberOfLines={1}>
                       {record.studentName}
                     </Text>
                     {!isUnknown && (
-                      <Text className="mt-0.5 text-xs text-gray-500">
+                      <Text className="mt-0.5 text-xs font-medium text-[#64748B]">
                         Roll: {record.rollNumber}
                       </Text>
                     )}
                   </View>
                   
-                  <View className={`rounded-full px-2 py-1 ml-2 ${isPresentOrManual ? "bg-[#DCFCE7]" : isAbsent ? "bg-[#F3F4F6]" : isUnknown ? "bg-[#FEE2E2]" : "bg-[#FEF3C7]"}`}>
-                    <Text className={`text-[10px] font-bold ${isPresentOrManual ? "text-[#15803D]" : isAbsent ? "text-[#6B7280]" : isUnknown ? "text-[#DC2626]" : "text-[#B45309]"}`}>
+                  <View className={`rounded-full px-2.5 py-1 ml-2 border ${isPresentOrManual ? "bg-green-100 border-green-200" : isAbsent ? "bg-gray-100 border-gray-200" : isUnknown ? "bg-red-100 border-red-200" : "bg-orange-100 border-orange-200"}`}>
+                    <Text className={`text-[9px] font-bold tracking-wider ${isPresentOrManual ? "text-green-700" : isAbsent ? "text-gray-600" : isUnknown ? "text-red-600" : "text-orange-700"}`}>
                       {isUnknown ? "UNKNOWN" : (isPresentOrManual ? "PRESENT" : record.status)}
                     </Text>
                   </View>
@@ -290,16 +303,17 @@ export default function AttendanceReviewScreen() {
                     setRecordToReassign(record);
                     setStudentSelectVisible(true);
                   }}
-                  className="mt-2 flex-row items-center"
+                  activeOpacity={0.7}
+                  className="mt-3 flex-row items-center bg-white self-start px-3 py-1.5 rounded-full border border-gray-200 shadow-sm"
                 >
-                    <Ionicons name="pencil" size={14} color="#3B82F6" />
-                    <Text className="ml-1 text-sm font-semibold text-[#3B82F6]">
+                    <Ionicons name="pencil" size={12} color="#4338CA" />
+                    <Text className="ml-1.5 text-xs font-bold text-[#4338CA]">
                       {isUnknown ? "Assign Student" : "Edit"}
                     </Text>
-                  </TouchableOpacity>
+                </TouchableOpacity>
 
                 {isAbsent && (
-                  <Text className="mt-2 text-xs text-gray-400">
+                  <Text className="mt-3 text-xs font-semibold text-[#94A3B8]">
                     Tap photo icon to capture
                   </Text>
                 )}
@@ -312,24 +326,27 @@ export default function AttendanceReviewScreen() {
           {!fromHistory ? (
             <TouchableOpacity
               onPress={() => router.dismissAll()}
-              className="flex-1 items-center justify-center rounded-2xl bg-[#2563EB] py-4 shadow-sm"
+              activeOpacity={0.8}
+              className="flex-1 items-center justify-center rounded-3xl bg-[#4338CA] py-5 shadow-md"
             >
-              <Text className="font-bold text-lg text-white">Confirm Attendance</Text>
+              <Text className="font-bold text-lg text-white">Confirm & Save</Text>
             </TouchableOpacity>
           ) : (
             <>
               <TouchableOpacity
                 onPress={() => router.back()}
-                className="flex-1 items-center justify-center rounded-2xl border border-gray-300 bg-white py-4 shadow-sm"
+                activeOpacity={0.8}
+                className="flex-1 items-center justify-center rounded-3xl border border-gray-200 bg-white py-5 shadow-sm"
               >
-                <Text className="font-bold text-lg text-gray-700">Close</Text>
+                <Text className="font-bold text-lg text-[#0F172A]">Close</Text>
               </TouchableOpacity>
 
               {session?.status !== "SYNCED" && (
                 <TouchableOpacity
                   disabled={syncing}
                   onPress={handleManualSync}
-                  className="flex-1 items-center justify-center rounded-2xl bg-orange-500 py-4 shadow-sm"
+                  activeOpacity={0.8}
+                  className="flex-1 items-center justify-center rounded-3xl bg-[#10B981] py-5 shadow-sm"
                 >
                   {syncing ? (
                     <ActivityIndicator color="white" />

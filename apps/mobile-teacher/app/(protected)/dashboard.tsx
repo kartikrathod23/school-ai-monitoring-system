@@ -175,430 +175,224 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         className="flex-1"
       >
-        <View className="bg-[#2563EB] px-5 pb-6 pt-4">
-          <View className="flex-row items-start justify-between">
-            <View>
-              <Text className="text-xl font-bold text-white">
-                Teacher Dashboard
-              </Text>
-
-              <Text className="mt-1 text-base text-blue-100">
-                {teacher?.user?.firstName}{" "}
-                {teacher?.user?.lastName}
-              </Text>
-            </View>
-
-            <View className="flex-row items-center gap-3">
-              <TouchableOpacity onPress={handleLogout} className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
-                <LogOut size={20} color="white" />
-              </TouchableOpacity>
-              <View className="h-11 w-11 overflow-hidden rounded-full bg-white items-center justify-center">
+        {/* Header Section */}
+        <View className="px-5 pt-8 pb-6">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
+              <View className="h-14 w-14 rounded-full border-2 border-white shadow-sm overflow-hidden bg-white items-center justify-center">
                 <Image
                   source={require("../../assets/images/uitb-logo.jpg")}
-                  className="h-10 w-10"
+                  className="h-12 w-12"
                   resizeMode="contain"
                 />
               </View>
+              <View className="ml-4 flex-1">
+                <Text className="text-sm font-medium text-gray-500">
+                  Welcome back,
+                </Text>
+                <Text className="text-xl font-bold text-gray-900" numberOfLines={1}>
+                  {teacher?.user?.firstName} {teacher?.user?.lastName}
+                </Text>
+              </View>
             </View>
+            <TouchableOpacity onPress={handleLogout} className="h-12 w-12 items-center justify-center rounded-full bg-red-50 border border-red-100 ml-2">
+              <LogOut size={20} color="#EF4444" />
+            </TouchableOpacity>
           </View>
 
-          <View className="mt-5 rounded-2xl bg-[#1D4ED8] p-4">
-            <Text className="text-center text-base text-blue-100">
-              Today
+          <View className="mt-5 flex-row items-center px-1">
+            <CalendarDays size={16} color="#64748B" />
+            <Text className="ml-2 text-sm font-medium text-[#64748B]">
+              {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </Text>
+          </View>
+        </View>
 
-            <View className="mt-2 flex-row items-center justify-center">
-              <CalendarDays size={16} color="white" />
-
-              <Text className="ml-2 text-base text-white">
-                {new Date().toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </Text>
+        {/* Assigned Class Premium Card */}
+        <View className="px-4 pb-2">
+          <View className="rounded-3xl bg-[#4338CA] p-6 shadow-lg relative overflow-hidden">
+            {/* Decorative background shapes */}
+            <View className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
+            <View className="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-black/10" />
+            
+            <Text className="text-indigo-200 font-medium text-sm tracking-wider uppercase">Assigned Class</Text>
+            
+            <View className="mt-4 flex-row items-end justify-between">
+              <View>
+                <Text className="text-4xl font-bold text-white">
+                  Std {assignedSection?.section?.standard?.value}
+                </Text>
+                <Text className="text-xl font-medium text-indigo-50 mt-1">
+                  Section {assignedSection?.section?.name}
+                </Text>
+              </View>
+              <View className="items-end">
+                <View className="bg-white/20 px-4 py-2 rounded-full mb-2 border border-white/10">
+                  <Text className="text-white font-bold text-sm">{summary?.totalStudents || 0} Students</Text>
+                </View>
+                <Text className="text-xs text-indigo-200 font-medium max-w-[120px] text-right" numberOfLines={2}>
+                  {assignedSection?.section?.standard?.school?.name}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
-        <View className="px-4 pb-10 pt-4">
-          <Text className="mb-3 text-base font-semibold text-[#475569]">
-            Assigned Class
+        <View className="px-4 pb-10">
+          <Text className="mb-4 mt-6 text-base font-semibold text-[#475569]">
+            System Status
           </Text>
 
-          <View className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
-            <View className="flex-row justify-between">
-              <View>
-                <Text className="text-base text-gray-500">
-                  School
-                </Text>
-
-                <Text className="mt-1 text-base font-semibold text-[#0F172A]">
-                  {assignedSection?.section?.standard?.school?.name}
-                </Text>
+          <View className="flex-row justify-around">
+            <View className="w-[45%] items-center">
+              <View className={`h-16 w-16 items-center justify-center rounded-full border ${locationStatus?.isInside ? 'bg-[#ECFDF5] border-[#D1FAE5]' : 'bg-[#FEF2F2] border-[#FECACA]'}`}>
+                <CircleCheckBig size={26} color={locationStatus?.isInside ? '#059669' : '#DC2626'} />
               </View>
-
-              <View>
-                <Text className="text-base text-gray-500">
-                  Standard
-                </Text>
-
-                <Text className="mt-1 text-base font-semibold text-[#0F172A]">
-                  Standard{" "}
-                  {assignedSection?.section?.standard?.value}
-                </Text>
-              </View>
+              <Text className="mt-2 text-center text-sm font-medium text-[#475569]">Location</Text>
+              <Text className={`mt-1 text-center text-xs font-semibold ${locationStatus?.isInside ? 'text-[#059669]' : 'text-[#DC2626]'}`}>
+                {locationStatus?.isInside ? 'Verified' : 'Unverified'}
+              </Text>
             </View>
 
-            <View className="mt-5 flex-row justify-between">
-              <View>
-                <Text className="text-base text-gray-500">
-                  Section
-                </Text>
-
-                <Text className="mt-1 text-base font-semibold text-[#0F172A]">
-                  Section{" "}{assignedSection?.section?.name}
-                </Text>
+            <View className="w-[45%] items-center">
+              <View className={`h-16 w-16 items-center justify-center rounded-full border ${modelReady === true ? 'bg-[#ECFDF5] border-[#D1FAE5]' : modelReady === false ? 'bg-[#FEF9C3] border-[#FEF08A]' : 'bg-[#F8FAFC] border-[#E2E8F0]'}`}>
+                {modelReady === true ? <Wifi size={26} color="#059669" /> : modelReady === false ? <WifiOff size={26} color="#B45309" /> : <ActivityIndicator size="small" color="#64748B" />}
               </View>
-
-              <View>
-                <Text className="text-base text-gray-500">
-                  Total Students
-                </Text>
-
-                <Text className="mt-1 text-base font-semibold text-[#0F172A]">
-                  {summary?.totalStudents || 0} Students
-                </Text>
-              </View>
-            </View>
-
-            <Text className="mt-4 text-base text-gray-400">
-              * Contact admin to modify class assignment
-            </Text>
-          </View>
-
-          <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
-            Location Verification
-          </Text>
-
-          <View
-            className={`rounded-2xl border p-4 ${locationStatus?.isInside
-              ? "border-[#D1FAE5] bg-[#ECFDF5]"
-              : "border-[#FECACA] bg-[#FEF2F2]"
-              }`}
-          >
-            <View className="flex-row items-center">
-              <CircleCheckBig
-                size={22}
-                color={
-                  locationStatus?.isInside
-                    ? "#059669"
-                    : "#DC2626"
-                }
-              />
-
-              <View className="ml-3">
-                <Text
-                  className={`font-semibold ${locationStatus?.isInside
-                    ? "text-[#065F46]"
-                    : "text-[#991B1B]"
-                    }`}
-                >
-                  {locationStatus?.isInside
-                    ? "Verified"
-                    : "Not Verified"}
-                </Text>
-
-                <Text
-                  className={`mt-1 text-base ${locationStatus?.isInside
-                    ? "text-[#047857]"
-                    : "text-[#B91C1C]"
-                    }`}
-                >
-                  {
-                    locationStatus
-                      ? (
-                        locationStatus.isInside
-                          ? "You are inside school premises"
-                          : `You are ${locationStatus.distance >= 1000
-                            ? `${(locationStatus.distance / 1000).toFixed(2)} km`
-                            : `${Math.round(locationStatus.distance)} m`
-                          } away from school`
-                      )
-                      : "Checking location..."
-                  }
-                </Text>
-              </View>
-            </View>
-
-            <Text className="mt-3 text-base text-[#6B7280]">
-              Geofence verification is required to mark
-              attendance
-            </Text>
-          </View>
-
-          <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
-            Offline AI Status
-          </Text>
-
-          <View
-            className={`rounded-2xl border p-4 ${
-              modelReady === true
-                ? "border-[#D1FAE5] bg-[#ECFDF5]"
-                : modelReady === false
-                ? "border-[#FEF08A] bg-[#FEF9C3]"
-                : "border-[#E2E8F0] bg-[#F8FAFC]"
-            }`}
-          >
-            <View className="flex-row items-center">
-              {modelReady === true ? (
-                <Wifi size={22} color="#059669" />
-              ) : modelReady === false ? (
-                <WifiOff size={22} color="#B45309" />
-              ) : (
-                <ActivityIndicator size="small" color="#64748B" />
-              )}
-
-              <View className="ml-3 flex-1">
-                <Text
-                  className={`font-semibold ${
-                    modelReady === true
-                      ? "text-[#065F46]"
-                      : modelReady === false
-                      ? "text-[#92400E]"
-                      : "text-[#475569]"
-                  }`}
-                >
-                  {modelReady === true
-                    ? "Models Ready"
-                    : modelReady === false
-                    ? "Models Missing"
-                    : "Checking Status..."}
-                </Text>
-
-                <Text
-                  className={`mt-1 text-base ${
-                    modelReady === true
-                      ? "text-[#047857]"
-                      : modelReady === false
-                      ? "text-[#B45309]"
-                      : "text-[#64748B]"
-                  }`}
-                >
-                  {modelReady === true
-                    ? "Ready for offline attendance capture"
-                    : modelReady === false
-                    ? "Requires internet to download latest models"
-                    : "Verifying local AI models..."}
-                </Text>
-              </View>
+              <Text className="mt-2 text-center text-sm font-medium text-[#475569]">Offline AI</Text>
+              <Text className={`mt-1 text-center text-xs font-semibold ${modelReady === true ? 'text-[#059669]' : modelReady === false ? 'text-[#B45309]' : 'text-[#64748B]'}`}>
+                {modelReady === true ? 'Ready' : modelReady === false ? 'Missing' : 'Checking'}
+              </Text>
             </View>
           </View>
 
-          <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
-            Daily Operations
+          <Text className="mb-4 mt-6 text-base font-semibold text-[#475569]">
+            Quick Actions
           </Text>
 
-          <View className="gap-y-4">
-            <TouchableOpacity activeOpacity={0.8} onPress={() =>router.push("/(protected)/attendance-capture") } className="rounded-2xl bg-[#2563EB] p-4">
-              <View className="flex-row items-center">
-                <View className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
-                  <Camera
-                    size={22}
-                    color="white"
-                  />
-                </View>
-
-                <View className="ml-4 flex-1">
-                  <Text className="text-base font-semibold text-white">
-                    Start Attendance
-                  </Text>
-
-                  <Text className="mt-1 text-base text-blue-100">
-                    Capture classroom photos for AI
-                    scanning
-                  </Text>
-                </View>
+          <View className="flex-row flex-wrap gap-y-6">
+            {/* Start Attendance */}
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              onPress={() => router.push("/(protected)/attendance-capture")} 
+              className="w-[33%] items-center"
+            >
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#EFF6FF] border border-[#BFDBFE]">
+                <Camera size={26} color="#2563EB" />
               </View>
+              <Text className="mt-2 text-center text-sm font-medium text-[#475569]">
+                Attendance
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/(protected)/meal-count")}className="rounded-2xl bg-[#10B981] p-4">
-              <View className="flex-row items-center">
-                <View className="h-11 w-11 items-center justify-center rounded-full bg-white/20">
-                  <UtensilsCrossed
-                    size={22}
-                    color="white"
-                  />
-                </View>
-
-                <View className="ml-4 flex-1">
-                  <Text className="text-base font-semibold text-white">
-                    Start Mid-Day Meal Count
-                  </Text>
-
-                  <Text className="mt-1 text-base text-green-100">
-                    Capture photos for student meal count
-                  </Text>
-                </View>
+            {/* Meal Count */}
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              onPress={() => router.push("/(protected)/meal-count")} 
+              className="w-[33%] items-center"
+            >
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#ECFDF5] border border-[#A7F3D0]">
+                <UtensilsCrossed size={26} color="#10B981" />
               </View>
+              <Text className="mt-2 text-center text-sm font-medium text-[#475569]">
+                Meal Count
+              </Text>
+            </TouchableOpacity>
+
+            {/* Face Onboarding */}
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              onPress={() => router.push("/(protected)/face-onboarding")} 
+              className="w-[33%] items-center"
+            >
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#FAF5FF] border border-[#E9D5FF] relative">
+                <Users size={26} color="#9333EA" />
+                {/* Show a red dot if there are students requiring rescan or pending */}
+                {((summary?.onboarding?.rescan || 0) > 0 || (summary?.onboarding?.pending || 0) > 0) && (
+                  <View className="absolute right-0 top-0 h-4 w-4 rounded-full bg-red-500 border-2 border-white" />
+                )}
+              </View>
+              <Text className="mt-2 text-center text-sm font-medium text-[#475569]">
+                Onboarding
+              </Text>
+            </TouchableOpacity>
+
+            {/* View Attendance History */}
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              onPress={() => router.push("/(protected)/attendance-history")} 
+              className="w-[33%] items-center"
+            >
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#F8FAFC] border border-[#E2E8F0]">
+                <ChartNoAxesColumn size={26} color="#475569" />
+              </View>
+              <Text className="mt-2 text-center text-sm font-medium text-[#475569]">
+                View Attendace
+              </Text>
+            </TouchableOpacity>
+
+            {/* View Meal History */}
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              onPress={() => router.push("/(protected)/meal-history")} 
+              className="w-[33%] items-center"
+            >
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#F8FAFC] border border-[#E2E8F0]">
+                <UtensilsCrossed size={26} color="#475569" />
+              </View>
+              <Text className="mt-2 text-center text-sm font-medium text-[#475569]">
+                View Meals
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
-            Student Management
-          </Text>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() =>
-              router.push("/(protected)/face-onboarding")
-            }
-            className="rounded-2xl border border-[#E9D5FF] bg-[#FAF5FF] p-4"
-          >
-            <View className="flex-row items-center">
-              <View className="h-11 w-11 items-center justify-center rounded-full bg-[#E9D5FF]">
-                <Users
-                  size={22}
-                  color="#9333EA"
-                />
-              </View>
-
-              <View className="ml-4 flex-1">
-                <Text className="text-base font-semibold text-[#581C87]">
-                  Face Onboarding
-                </Text>
-
-                <Text className="mt-1 text-base text-[#7E22CE]">
-                  Attach face data to students
-                  (One-time process)
-                </Text>
-              </View>
-            </View>
-
-            <View className="mt-4 flex-row justify-between">
-              <View className="rounded-lg bg-green-100 px-3 py-2">
-                <Text className="text-base font-medium text-green-700">
-                  {summary?.onboarding?.added || 0} Added
-                </Text>
-              </View>
-
-              <View className="rounded-lg bg-yellow-100 px-3 py-2">
-                <Text className="text-base font-medium text-yellow-700">
-                  {summary?.onboarding?.pending || 0} Pending
-                </Text>
-              </View>
-
-              <View className="rounded-lg bg-red-100 px-3 py-2">
-                <Text className="text-base font-medium text-red-700">
-                  {summary?.onboarding?.rescan || 0} Re-scan
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
-            View Reports
-          </Text>
-
-          <View className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
-            <View className="flex-row items-center">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-[#EFF6FF]">
-                <ChartNoAxesColumn
-                  size={20}
-                  color="#2563EB"
-                />
-              </View>
-
-              <TouchableOpacity onPress={() =>router.push("/(protected)/attendance-history")}>
-                <View className="ml-3">
-                  <Text className="font-semibold text-[#0F172A]">
-                    View Attendance
-                  </Text>
-
-                  <Text className="mt-1 text-base text-gray-500">
-                    Read-only access
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View className="mt-4 rounded-2xl border border-[#E2E8F0] bg-white p-4">
-            <View className="flex-row items-center">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-green-50">
-                <UtensilsCrossed
-                  size={20}
-                  color="#16A34A"
-                />
-              </View>
-
-              <TouchableOpacity onPress={() =>router.push("/(protected)/meal-history")}>
-                <View className="ml-3">
-                  <Text className="font-semibold text-[#0F172A]">
-                    View Meal History
-                  </Text>
-
-                  <Text className="mt-1 text-base text-gray-500">
-                    Sync or view past meal counts
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <Text className="mb-3 mt-6 text-base font-semibold text-[#475569]">
+          <Text className="mb-4 mt-6 text-base font-semibold text-[#475569]">
             Today’s Summary
           </Text>
 
-          <View className="flex-row flex-wrap justify-between gap-y-4">
-            <View className="w-[48%] rounded-2xl bg-[#EEF2FF] p-4">
-              <Text className="text-center text-3xl font-bold text-[#4338CA]">
-                {summary?.attendance?.presentStudents || 0}
-              </Text>
-
-              <Text className="mt-2 text-center text-base text-[#6366F1]">
+          <View className="flex-row justify-between">
+            <View className="w-[23%] items-center">
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#EEF2FF] border border-[#C7D2FE]">
+                <Text className="text-xl font-bold text-[#4338CA]">
+                  {summary?.attendance?.presentStudents || 0}
+                </Text>
+              </View>
+              <Text className="mt-2 text-center text-xs font-medium text-[#6366F1]">
                 Present
               </Text>
             </View>
 
-            <View className="w-[48%] rounded-2xl bg-[#FEF2F2] p-4">
-              <Text className="text-center text-3xl font-bold text-[#DC2626]">
-                {summary?.attendance?.absentStudents || 0}
-              </Text>
-
-              <Text className="mt-2 text-center text-base text-[#EF4444]">
+            <View className="w-[23%] items-center">
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#FEF2F2] border border-[#FECACA]">
+                <Text className="text-xl font-bold text-[#DC2626]">
+                  {summary?.attendance?.absentStudents || 0}
+                </Text>
+              </View>
+              <Text className="mt-2 text-center text-xs font-medium text-[#EF4444]">
                 Absent
               </Text>
             </View>
 
-            <View className="w-[48%] rounded-2xl bg-[#ECFDF5] p-4">
-              <Text className="text-center text-3xl font-bold text-[#059669]">
-                {summary?.meals?.mealsServed || 0}
-              </Text>
-
-              <Text className="mt-2 text-center text-base text-[#10B981]">
-                Meals Served
+            <View className="w-[23%] items-center">
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#ECFDF5] border border-[#A7F3D0]">
+                <Text className="text-xl font-bold text-[#059669]">
+                  {summary?.meals?.mealsServed || 0}
+                </Text>
+              </View>
+              <Text className="mt-2 text-center text-xs font-medium text-[#10B981]">
+                Meals
               </Text>
             </View>
 
-            <View className="w-[48%] rounded-2xl bg-[#FFFBEB] p-4">
-              <Text className="text-center text-3xl font-bold text-[#D97706]">
-                {summary?.attendance?.attendancePercentage || 0}%
-              </Text>
-
-              <Text className="mt-2 text-center text-base text-[#F59E0B]">
+            <View className="w-[23%] items-center">
+              <View className="h-16 w-16 items-center justify-center rounded-full bg-[#FFFBEB] border border-[#FDE68A]">
+                <Text className="text-lg font-bold text-[#D97706]">
+                  {summary?.attendance?.attendancePercentage || 0}%
+                </Text>
+              </View>
+              <Text className="mt-2 text-center text-xs font-medium text-[#F59E0B]">
                 Attendance
               </Text>
             </View>
-          </View>
-
-          <View className="mt-6 rounded-xl border border-[#FDE68A] bg-[#FEFCE8] p-4">
-            <Text className="text-base leading-5 text-[#92400E]">
-              Note: You cannot add students, modify
-              sections, or access analytics. Contact
-              admin for system changes.
-            </Text>
           </View>
 
           <View className="mt-8 flex-row items-center justify-center">

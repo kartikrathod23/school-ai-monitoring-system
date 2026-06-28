@@ -134,3 +134,98 @@ export const processFaceOnboardingJob = async (data: any) => {
     });
   }
 };
+
+export const processBatchOnboardingForSection = async (sectionId: string) => {
+  console.log(`[onboarding] Processing batch onboarding for section: ${sectionId}`);
+
+  const pendingSessions = await prisma.faceOnboardingSession.findMany({
+    where: {
+      sectionId,
+      status: "IMAGES_CAPTURED",
+    }
+  });
+
+  if (pendingSessions.length === 0) {
+    console.log(`[onboarding] No pending onboarding sessions found for section ${sectionId}.`);
+    return;
+  }
+
+  console.log(`[onboarding] Found ${pendingSessions.length} pending sessions. Starting extraction...`);
+
+  for (const session of pendingSessions) {
+    try {
+      console.log(`[onboarding] Extracting embeddings for student: ${session.studentId}`);
+
+      const images = await prisma.studentFaceImage.findMany({
+        where: { onboardingSessionId: session.id },
+      });
+
+      if (images.length === 0) {
+        throw new Error("No images found for onboarding session");
+      }
+
+      const imageUrls = await presignImageUrls(images.map((img) => img.imageUrl));
+
+      let result: OnboardResponse;
+      try {
+        const response = await axios.post<OnboardResponse>(
+          `${ML_SERVICE_URL}/onboard`,
+          {
+            imageUrls,
+            studentId: session.studentId,
+          },
+          { timeout: 120_000 }
+        );
+        result = response.data;
+      } catch (err: any) {
+        const axiosErr = err as AxiosError<{ detail: string }>;
+        const detail = axiosErr.response?.data?.detail || axiosErr.message;
+        throw new Error(`ml-service /onboard failed: ${detail}`);
+      }
+
+      if (!result.success || result.embeddings.length === 0) {
+        throw new Error(`ml-service returned no embeddings. Faces found: ${result.facesFound}`);
+      }
+
+      await prisma.studentFaceEmbedding.deleteMany({
+        where: { studentId: session.studentId }
+      });
+
+      for (const embedding of result.embeddings) {
+        await prisma.studentFaceEmbedding.create({
+          data: {
+            studentId: session.studentId,
+            embedding: embedding,
+            modelVersion: result.modelVersion,
+          },
+        });
+      }
+
+      await prisma.faceOnboardingSession.update({
+        where: { id: session.id },
+        data: { status: "COMPLETED" },
+      });
+
+      await prisma.student.update({
+        where: { id: session.studentId },
+        data: { faceStatus: "ADDED" },
+      });
+
+      console.log(`[onboarding] Success for student ${session.studentId}. Embeddings stored: ${result.facesFound}`);
+    } catch (error: any) {
+      console.error(`[onboarding] Failed for student ${session.studentId}:`, error.message);
+
+      await prisma.faceOnboardingSession.update({
+        where: { id: session.id },
+        data: { status: "FAILED" },
+      });
+
+      await prisma.student.update({
+        where: { id: session.studentId },
+        data: { faceStatus: "RESCAN" },
+      });
+    }
+  }
+
+  console.log(`[onboarding] Batch processing completed for section ${sectionId}.`);
+};

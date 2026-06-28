@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useCallback } from "react";
 import { router, useFocusEffect } from "expo-router";
-import { ArrowLeft, Calendar, ChevronRight, CloudUpload } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { getAllMealSessions, OfflineMealSession } from "@/src/db/offlineMeal";
 import { syncOfflineMeals } from "@/src/services/syncManager.service";
 import { useAuthStore } from "@/src/store/auth.store";
@@ -56,112 +56,89 @@ export default function MealHistoryScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#F8FAFC]">
-        <ActivityIndicator size="large" color="#16A34A" />
-      </View>
+      <SafeAreaView className="flex-1 bg-[#F4F7FB] justify-center items-center">
+        <ActivityIndicator size="large" color="#4338CA" />
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8FAFC]">
-      <View className="flex-row items-center justify-between bg-white px-5 py-4 shadow-sm z-10">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-full bg-gray-100"
-        >
-          <ArrowLeft size={20} color="#1E293B" />
+    <SafeAreaView className="flex-1 bg-[#F4F7FB]">
+      {/* Header Section */}
+      <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
+        <TouchableOpacity onPress={() => router.back()} className="h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
+          <Ionicons name="arrow-back" size={20} color="#0F172A" />
         </TouchableOpacity>
-        <Text className="text-[18px] font-bold text-[#1E293B]">Mid-Day Meal History</Text>
-        <View className="w-10" />
-      </View>
 
-      {pendingCount > 0 && (
-        <View className="bg-amber-50 px-5 py-4 border-b border-amber-200 flex-row items-center justify-between">
-          <View className="flex-1 pr-4">
-            <Text className="text-amber-800 font-bold mb-1">Pending Sync ({pendingCount})</Text>
-            <Text className="text-amber-700 text-xs">
-              You have offline meal counts that need to be synced.
-            </Text>
-          </View>
+        <Text className="text-lg font-bold text-[#0F172A]">Meal History</Text>
+
+        {pendingCount > 0 ? (
           <TouchableOpacity
-            disabled={syncing}
             onPress={handleSyncAll}
-            className={`flex-row items-center px-4 py-2 rounded-xl ${syncing ? 'bg-amber-300' : 'bg-amber-600'}`}
+            disabled={syncing}
+            className="h-10 px-3 items-center justify-center rounded-full bg-[#10B981] shadow-sm flex-row"
           >
             {syncing ? (
-              <ActivityIndicator size="small" color="white" className="mr-2" />
+              <ActivityIndicator size="small" color="white" />
             ) : (
-              <CloudUpload size={16} color="white" className="mr-2" />
+              <>
+                <Ionicons name="cloud-upload" size={16} color="white" />
+                <Text className="ml-1 text-white font-bold text-xs">{pendingCount}</Text>
+              </>
             )}
-            <Text className="text-white font-bold text-sm">
-              {syncing ? 'Syncing...' : 'Sync All'}
-            </Text>
           </TouchableOpacity>
-        </View>
-      )}
+        ) : (
+          <View className="h-10 w-10" />
+        )}
+      </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-      >
+      <ScrollView className="flex-1 px-5 pt-4" showsVerticalScrollIndicator={false}>
         {sessions.length === 0 ? (
-          <View className="items-center justify-center py-20">
-            <View className="h-20 w-20 rounded-full bg-gray-100 items-center justify-center mb-4">
-              <Calendar size={32} color="#94A3B8" />
+          <View className="items-center mt-20">
+            <View className="h-20 w-20 rounded-full bg-gray-200 items-center justify-center mb-4">
+              <Ionicons name="fast-food-outline" size={32} color="#94A3B8" />
             </View>
-            <Text className="text-[18px] font-bold text-gray-800 text-center">No Meal Records</Text>
-            <Text className="text-gray-500 text-center mt-2 px-8">
-              You haven't recorded any mid-day meals on this device yet.
-            </Text>
+            <Text className="text-[#94A3B8] font-bold text-lg">No history found</Text>
           </View>
         ) : (
-          sessions.map((session) => (
-            <TouchableOpacity
-              key={session.id}
-              onPress={() => router.push(`/(protected)/meal-review?sessionId=${session.id}&fromHistory=true`)}
-              className="bg-white rounded-3xl p-5 mb-4 border border-gray-100 shadow-sm"
-            >
-              <View className="flex-row items-center justify-between border-b border-gray-50 pb-3 mb-3">
-                <View className="flex-row items-center">
-                  <View className="h-10 w-10 rounded-full bg-green-50 items-center justify-center mr-3">
-                    <Calendar size={18} color="#16A34A" />
-                  </View>
-                  <View>
-                    <Text className="font-bold text-[#1E293B] text-[16px]">
-                      {new Date(session.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </Text>
-                    <Text className="text-xs text-gray-500 mt-0.5">
-                      {session.status === 'SYNCED' ? 'Synced' : 'Not Synced'}
+          <View className="flex-row flex-wrap justify-between">
+            {sessions.map((session) => (
+              <TouchableOpacity
+                key={session.id}
+                onPress={() => router.push(`/(protected)/meal-review?sessionId=${session.id}&fromHistory=true`)}
+                activeOpacity={0.8}
+                className="bg-white rounded-3xl p-4 mb-4 shadow-sm border border-gray-100 w-[48%]"
+              >
+                <View className="flex-row justify-between items-start mb-3">
+                  <View className={`px-2 py-1 rounded-full border ${session.status === 'SYNCED' ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
+                    <Text className={`text-[9px] font-bold ${session.status === 'SYNCED' ? 'text-green-700' : 'text-orange-700'}`}>
+                      {session.status === 'SYNCED' ? 'SYNCED' : 'PENDING'}
                     </Text>
                   </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                 </View>
-                <View className={`px-3 py-1.5 rounded-full ${session.status === 'SYNCED' ? 'bg-green-100' : 'bg-amber-100'}`}>
-                  <Text className={`text-xs font-bold ${session.status === 'SYNCED' ? 'text-green-700' : 'text-amber-700'}`}>
-                    {session.status}
+
+                <View className="items-center mb-3">
+                  <View className="bg-[#FFFBEB] border border-[#FDE68A] rounded-full h-16 w-16 items-center justify-center shadow-sm">
+                    <Text className="text-[#D97706] text-2xl font-black">
+                      {session.totalDetected}
+                    </Text>
+                  </View>
+                  <Text className="text-[#D97706] text-[10px] font-bold mt-2 uppercase tracking-wider">Meals</Text>
+                </View>
+
+                <View className="flex-row items-center justify-center bg-gray-50 py-2 rounded-2xl border border-gray-100">
+                  <Ionicons name="calendar" size={12} color="#64748B" />
+                  <Text className="text-[10px] font-bold text-[#475569] ml-1">
+                    {new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </Text>
                 </View>
-              </View>
-
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row gap-x-6">
-                  <View>
-                    <Text className="text-gray-500 text-xs mb-1">Total Detected</Text>
-                    <Text className="font-bold text-[#1E293B] text-[18px]">{session.totalDetected}</Text>
-                  </View>
-                </View>
-                
-                <View className="h-8 w-8 rounded-full bg-gray-50 items-center justify-center">
-                  <ChevronRight size={16} color="#94A3B8" />
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
+
+        <View className="h-10" />
       </ScrollView>
     </SafeAreaView>
   );

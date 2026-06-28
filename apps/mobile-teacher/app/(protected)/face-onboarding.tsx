@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,8 +14,9 @@ import {
   UserRound,
   Funnel,
 } from "lucide-react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { api } from "@/src/lib/api";
+import { Ionicons } from "@expo/vector-icons";
 
 import { Alert, ToastAndroid, Platform } from "react-native";
 
@@ -56,23 +57,26 @@ export default function FaceOnboardingScreen() {
     }
   };
 
-  useEffect(() => {
-    loadStudents();
+  useFocusEffect(
+    useCallback(() => {
+      loadStudents();
 
-    const interval = setInterval(() => {
-      const hasPendingStudents =
-        students.some(
-          (student) =>
-            student.faceStatus === "PENDING"
-        );
+      const interval = setInterval(() => {
+        setStudents((currentStudents) => {
+          const hasPendingStudents = currentStudents.some(
+            (student) => student.faceStatus === "PENDING"
+          );
 
-      if (hasPendingStudents) {
-        loadStudents();
-      }
-    }, 5000);
+          if (hasPendingStudents) {
+            loadStudents();
+          }
+          return currentStudents;
+        });
+      }, 5000);
 
-    return () => clearInterval(interval);
-  }, [students]);
+      return () => clearInterval(interval);
+    }, [])
+  );
 
   const addedCount = useMemo(() => {
     return students.filter(
@@ -116,88 +120,68 @@ export default function FaceOnboardingScreen() {
 
         ListHeaderComponent={
           <>
-            <View className="bg-[#9333EA] px-4 pb-5 pt-4">
-              <View className="flex-row items-center justify-between">
-                <View>
-                  <Text className="text-2xl font-bold text-white">
-                    Face Onboarding
-                  </Text>
+            <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
+              <TouchableOpacity onPress={() => router.back()} className="h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
+                  <Ionicons name="arrow-back" size={20} color="#0F172A" />
+              </TouchableOpacity>
 
-                  <Text className="mt-1 text-base text-purple-100">
-                    Standard 5 - Section A
-                  </Text>
-                </View>
+              <Text className="text-lg font-bold text-[#0F172A]">Face Onboarding</Text>
 
-                <View className="h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white">
+              <View className="h-10 w-10 overflow-hidden rounded-full border border-gray-100 shadow-sm bg-white items-center justify-center">
                   <Image
-                    source={require("../../assets/images/uitb-logo.jpg")}
-                    className="h-10 w-10"
-                    resizeMode="contain"
+                      source={require("../../assets/images/uitb-logo.jpg")}
+                      className="h-8 w-8"
+                      resizeMode="contain"
                   />
-                </View>
               </View>
-
-              <View className="mt-5 flex-row justify-between">
-                <View className="w-[31%] rounded-2xl bg-[#22C55E] py-3">
-                  <Text className="text-center text-2xl font-bold text-white">
-                    {addedCount}
-                  </Text>
-
-                  <Text className="mt-1 text-center text-sm text-white">
-                    Added
-                  </Text>
+            </View>
+            
+            {/* Stats Row */}
+            <View className="px-5 mt-2 flex-row justify-between">
+                <View className="w-[31%] items-center">
+                    <View className="h-16 w-16 items-center justify-center rounded-full bg-[#F0FDF4] border border-[#BBF7D0] shadow-sm">
+                        <Text className="text-xl font-bold text-[#16A34A]">{addedCount}</Text>
+                    </View>
+                    <Text className="mt-2 text-center text-xs font-semibold text-[#16A34A]">Added</Text>
                 </View>
 
-                <View className="w-[31%] rounded-2xl bg-[#F59E0B] py-3">
-                  <Text className="text-center text-2xl font-bold text-white">
-                    {pendingCount}
-                  </Text>
-
-                  <Text className="mt-1 text-center text-sm text-white">
-                    Pending
-                  </Text>
+                <View className="w-[31%] items-center">
+                    <View className="h-16 w-16 items-center justify-center rounded-full bg-[#FFFBEB] border border-[#FDE68A] shadow-sm">
+                        <Text className="text-xl font-bold text-[#D97706]">{pendingCount}</Text>
+                    </View>
+                    <Text className="mt-2 text-center text-xs font-semibold text-[#D97706]">Pending</Text>
                 </View>
 
-                <View className="w-[31%] rounded-2xl bg-[#EF4444] py-3">
-                  <Text className="text-center text-2xl font-bold text-white">
-                    {rescanCount}
-                  </Text>
-
-                  <Text className="mt-1 text-center text-sm text-white">
-                    Re-scan
-                  </Text>
+                <View className="w-[31%] items-center">
+                    <View className="h-16 w-16 items-center justify-center rounded-full bg-[#FEF2F2] border border-[#FECACA] shadow-sm">
+                        <Text className="text-xl font-bold text-[#DC2626]">{rescanCount}</Text>
+                    </View>
+                    <Text className="mt-2 text-center text-xs font-semibold text-[#DC2626]">Re-scan</Text>
                 </View>
+            </View>
+
+            {/* Premium Instruction Card */}
+            <View className="px-5 mt-8">
+              <View className="rounded-3xl bg-[#4338CA] p-6 shadow-lg relative overflow-hidden">
+                <View className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
+                <View className="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-black/10" />
+                
+                <Text className="text-white font-bold text-lg mb-2">One-Time Setup</Text>
+                <Text className="text-indigo-100 font-medium text-sm leading-6">
+                  • Capture at least 5 face images{"\n"}
+                  • Ensure student looks at the camera{"\n"}
+                  • Different face angles preferred
+                </Text>
               </View>
             </View>
 
-            <View className="mx-4 mt-4 rounded-2xl border border-[#E2E8F0] bg-white p-4">
-              <Text className="text-base font-semibold text-[#0F172A]">
-                One-Time Setup
-              </Text>
-
-              <Text className="mt-2 text-sm leading-6 text-[#64748B]">
-                • Capture at least 5 face images{"\n"}
-                • Student should look at camera{"\n"}
-                • Good lighting required{"\n"}
-                • Different face angles preferred{"\n"}
-                • Remove masks if possible
-              </Text>
-            </View>
-
-            <View className="mx-4 mt-5 flex-row items-center justify-between">
-              <Text className="text-base font-semibold text-[#334155]">
+            <View className="px-5 mt-8 mb-2 flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-[#0F172A]">
                 Student List ({students.length})
               </Text>
-
-              <View className="flex-row items-center rounded-xl border border-[#CBD5E1] bg-white px-3 py-2">
-                <Funnel
-                  size={15}
-                  color="#64748B"
-                />
-
-                <Text className="ml-2 text-sm text-[#475569]">
-                  All Students
-                </Text>
+              <View className="flex-row items-center rounded-full bg-white px-3 py-1.5 shadow-sm border border-gray-100">
+                <Funnel size={14} color="#64748B" />
+                <Text className="ml-2 text-xs font-bold text-[#475569]">All Students</Text>
               </View>
             </View>
           </>
@@ -304,7 +288,7 @@ export default function FaceOnboardingScreen() {
                     {isAdded
                       ? "Face Added"
                       : isPending
-                      ? "Verification Pending"
+                      ? "Onboarding Pending"
                       : isRescan
                       ? "Re-scan Required"
                       : "Face Not Added"}
@@ -329,13 +313,8 @@ export default function FaceOnboardingScreen() {
 
               {isPending && (
                 <View className="mt-4 flex-row items-center">
-                  <ActivityIndicator
-                    size="small"
-                    color="#D97706"
-                  />
-
-                  <Text className="ml-2 text-sm text-[#B45309]">
-                    AI verification in progress
+                  <Text className="text-sm text-[#B45309]">
+                    Onboarding is pending
                   </Text>
                 </View>
               )}
@@ -344,25 +323,32 @@ export default function FaceOnboardingScreen() {
         }}
 
         ListFooterComponent={
-          addedCount >= 2 ? (
-            <View className="px-4 mt-8 mb-4">
+          (addedCount >= 2 || pendingCount > 0) ? (
+            <View className="px-5 mt-8 mb-8">
               <TouchableOpacity
+                activeOpacity={0.8}
                 onPress={handleTrainModel}
                 disabled={isTraining}
-                className={`rounded-2xl py-4 flex-row justify-center items-center ${
-                  isTraining ? "bg-purple-400" : "bg-[#9333EA]"
+                className={`rounded-2xl py-4 flex-row justify-center items-center shadow-md ${
+                  isTraining ? "bg-[#818CF8]" : "bg-[#4338CA]"
                 }`}
               >
                 {isTraining ? (
-                  <ActivityIndicator color="white" />
+                  <>
+                    <ActivityIndicator color="white" />
+                    <Text className="ml-3 text-white font-bold text-base">Training Model...</Text>
+                  </>
                 ) : (
-                  <Text className="text-white font-bold text-lg">
-                    Train Model (All Students)
-                  </Text>
+                  <>
+                    <Ionicons name="hardware-chip" size={20} color="white" />
+                    <Text className="ml-2 text-white font-bold text-base">
+                      OnBoard Faces & Train Model
+                    </Text>
+                  </>
                 )}
               </TouchableOpacity>
-              <Text className="text-center text-xs text-gray-500 mt-3">
-                Run this once after adding faces for all students.
+              <Text className="text-center text-xs text-[#64748B] mt-4">
+                Run this once after capturing faces for all students.
               </Text>
             </View>
           ) : null
