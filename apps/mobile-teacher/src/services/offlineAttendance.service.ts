@@ -164,6 +164,15 @@ export const processAttendancePhoto = async (
         status = "MANUAL";
       }
 
+      // If we already have a better (higher confidence) photo of this student, skip saving this one
+      const existingRecord = store.currentRecords[studentId];
+      if (existingRecord) {
+        if (existingRecord.isManualOverride || existingRecord.confidence >= confidence) {
+          onProgress?.(`Skipped ${studentName} (better match exists)`);
+          continue;
+        }
+      }
+
       // 4. Save crop — returns file:// URI ready for <Image>
       const cropImagePath = await saveCropToFilesystem(
         face.cropBase64,

@@ -72,63 +72,90 @@ async function resizeImageToBase64(
 }
 
 // ─────────────────────────────────────────────────────────────────
-// cropRGBA
-// Pure-JS crop of a decoded RGBA pixel buffer.
-// Returns a new RGBA Uint8Array of size (cropW * cropH * 4).
+// ArcFace 112x112 Alignment (Umeyama + Affine Warp)
 // ─────────────────────────────────────────────────────────────────
-function cropRGBA(
-  srcData: Uint8Array,
-  srcWidth: number,
-  srcHeight: number,
-  x1: number,
-  y1: number,
-  cropW: number,
-  cropH: number
-): Uint8Array {
-  const out = new Uint8Array(cropW * cropH * 4);
-  for (let row = 0; row < cropH; row++) {
-    const srcRow = y1 + row;
-    if (srcRow >= srcHeight) break;
-    for (let col = 0; col < cropW; col++) {
-      const srcCol = x1 + col;
-      if (srcCol >= srcWidth) break;
-      const srcIdx = (srcRow * srcWidth + srcCol) * 4;
-      const dstIdx = (row * cropW + col) * 4;
-      out[dstIdx]     = srcData[srcIdx];     // R
-      out[dstIdx + 1] = srcData[srcIdx + 1]; // G
-      out[dstIdx + 2] = srcData[srcIdx + 2]; // B
-      out[dstIdx + 3] = srcData[srcIdx + 3]; // A
-    }
+const ARCFACE_DST = [
+  [38.2946, 51.6963],
+  [73.5318, 51.5014],
+  [56.0252, 71.7366],
+  [41.5493, 92.3655],
+  [70.7299, 92.2041],
+];
+
+function estimateSimilarityTransform(src: number[][], dst: number[][]): number[][] {
+  const num = src.length;
+  let meanSrcX = 0, meanSrcY = 0, meanDstX = 0, meanDstY = 0;
+  for (let i = 0; i < num; i++) {
+    meanSrcX += src[i][0]; meanSrcY += src[i][1];
+    meanDstX += dst[i][0]; meanDstY += dst[i][1];
   }
-  return out;
+  meanSrcX /= num; meanSrcY /= num;
+  meanDstX /= num; meanDstY /= num;
+
+  let sumSrcVar = 0, C11 = 0, C12 = 0, C21 = 0, C22 = 0;
+  for (let i = 0; i < num; i++) {
+    const srcCx = src[i][0] - meanSrcX, srcCy = src[i][1] - meanSrcY;
+    const dstCx = dst[i][0] - meanDstX, dstCy = dst[i][1] - meanDstY;
+    sumSrcVar += (srcCx * srcCx + srcCy * srcCy);
+    C11 += srcCx * dstCx; C12 += srcCx * dstCy;
+    C21 += srcCy * dstCx; C22 += srcCy * dstCy;
+  }
+  
+  const varSrc = sumSrcVar / num;
+  const S1 = (C11 + C22) / num, S2 = (C12 - C21) / num;
+  const norm = Math.sqrt(S1 * S1 + S2 * S2);
+  const scale = norm / varSrc;
+  const cosTheta = S1 / norm, sinTheta = S2 / norm;
+  
+  const a = scale * cosTheta, b = scale * sinTheta;
+  const tx = meanDstX - (a * meanSrcX - b * meanSrcY);
+  const ty = meanDstY - (b * meanSrcX + a * meanSrcY);
+  
+  return [[a, -b, tx], [b, a, ty]];
 }
 
-// ─────────────────────────────────────────────────────────────────
-// resizeRGBA
-// Pure-JS nearest-neighbour resize of an RGBA pixel buffer.
-// Used to scale the cropped face region to ARCFACE_SIZE×ARCFACE_SIZE.
-// ─────────────────────────────────────────────────────────────────
-function resizeRGBA(
-  srcData: Uint8Array,
-  srcWidth: number,
-  srcHeight: number,
-  dstWidth: number,
-  dstHeight: number
-): Uint8Array {
-  const out = new Uint8Array(dstWidth * dstHeight * 4);
-  const xRatio = srcWidth / dstWidth;
-  const yRatio = srcHeight / dstHeight;
+function invertAffine(M: number[][]): number[][] {
+  const a = M[0][0], b = M[0][1], tx = M[0][2];
+  const c = M[1][0], d = M[1][1], ty = M[1][2];
+  const det = a * d - b * c;
+  if (det === 0) throw new Error("Matrix not invertible");
+  const invA = d / det, invB = -b / det, invC = -c / det, invD = a / det;
+  return [[invA, invB, -(invA * tx + invB * ty)], [invC, invD, -(invC * tx + invD * ty)]];
+}
 
-  for (let row = 0; row < dstHeight; row++) {
-    const srcRow = Math.min(Math.floor(row * yRatio), srcHeight - 1);
-    for (let col = 0; col < dstWidth; col++) {
-      const srcCol = Math.min(Math.floor(col * xRatio), srcWidth - 1);
-      const srcIdx = (srcRow * srcWidth + srcCol) * 4;
-      const dstIdx = (row * dstWidth + col) * 4;
-      out[dstIdx]     = srcData[srcIdx];
-      out[dstIdx + 1] = srcData[srcIdx + 1];
-      out[dstIdx + 2] = srcData[srcIdx + 2];
-      out[dstIdx + 3] = srcData[srcIdx + 3];
+function warpAffineRGBA(
+  srcData: Uint8Array, srcWidth: number, srcHeight: number,
+  dstWidth: number, dstHeight: number, matrix: number[][]
+): Uint8Array {
+  const invM = invertAffine(matrix);
+  const out = new Uint8Array(dstWidth * dstHeight * 4);
+  const [invA, invB, invTx] = invM[0];
+  const [invC, invD, invTy] = invM[1];
+
+  for (let dstY = 0; dstY < dstHeight; dstY++) {
+    for (let dstX = 0; dstX < dstWidth; dstX++) {
+      const srcX = invA * dstX + invB * dstY + invTx;
+      const srcY = invC * dstX + invD * dstY + invTy;
+      const dstIdx = (dstY * dstWidth + dstX) * 4;
+      
+      const x0 = Math.floor(srcX), y0 = Math.floor(srcY);
+      const x1 = x0 + 1, y1 = y0 + 1;
+      
+      if (x0 >= 0 && x1 < srcWidth && y0 >= 0 && y1 < srcHeight) {
+        const dx = srcX - x0, dy = srcY - y0;
+        const w00 = (1 - dx) * (1 - dy), w10 = dx * (1 - dy);
+        const w01 = (1 - dx) * dy, w11 = dx * dy;
+        
+        const i00 = (y0 * srcWidth + x0) * 4, i10 = (y0 * srcWidth + x1) * 4;
+        const i01 = (y1 * srcWidth + x0) * 4, i11 = (y1 * srcWidth + x1) * 4;
+        
+        out[dstIdx]   = srcData[i00] * w00 + srcData[i10] * w10 + srcData[i01] * w01 + srcData[i11] * w11;
+        out[dstIdx+1] = srcData[i00+1] * w00 + srcData[i10+1] * w10 + srcData[i01+1] * w01 + srcData[i11+1] * w11;
+        out[dstIdx+2] = srcData[i00+2] * w00 + srcData[i10+2] * w10 + srcData[i01+2] * w01 + srcData[i11+2] * w11;
+        out[dstIdx+3] = 255;
+      } else {
+        out[dstIdx] = 0; out[dstIdx+1] = 0; out[dstIdx+2] = 0; out[dstIdx+3] = 255;
+      }
     }
   }
   return out;
@@ -247,20 +274,13 @@ class FaceDetector {
       const padY = Math.floor((DET_INPUT_SIZE - newH) / 2);
 
       // ── 2. Resize full image for tensor (ImageManipulator resize is fine) ─
+      // We resize it to max dimension 640. This is fast natively.
       const resizedBase64 = await resizeImageToBase64(tempFileUri, newW, newH);
 
       // ── 3. Decode resized JPEG → RGBA ────────────────────────────────────
+      // This is MUCH faster than decoding the 12MP original image.
       const resizedBuf = Buffer.from(resizedBase64, "base64");
       const resizedRaw = jpeg.decode(resizedBuf, { useTArray: true });
-
-      // ── 4. Also decode the ORIGINAL full-res JPEG for JS-side cropping ──
-      //    We need pixel data from the original so we can crop accurately.
-      const origBuf = Buffer.from(imageBase64, "base64");
-      const origRaw = jpeg.decode(origBuf, { useTArray: true });
-      const pixelRatio = origRaw.width / imgWidth;
-      console.log(
-        `[FaceDetector] Decoded original: ${origRaw.width}×${origRaw.height} (ratio=${pixelRatio})`
-      );
 
       // ── 5. Build CHW Float32 tensor (1×3×640×640) ────────────────────────
       const float32Data = new Float32Array(
@@ -336,81 +356,29 @@ class FaceDetector {
       const keepIndices = nms(allBoxes, allScores, NMS_THRESHOLD);
       const detectedFaces: DetectedFace[] = [];
 
-      // ── 9. Reverse letterbox + ArcFace alignment + JS crop ───────────────
+      // ── 9. ArcFace alignment + JS crop from the 640px image ───────────────
       for (const idx of keepIndices) {
         const box = allBoxes[idx];
         const score = allScores[idx];
         const lm = allLandmarks[idx];
 
-        // Map landmarks to original image coords
-        const leX = (lm[0] - padX) / scale;
-        const leY = (lm[1] - padY) / scale;
-        const reX = (lm[2] - padX) / scale;
-        const reY = (lm[3] - padY) / scale;
-
-        const ecX = (leX + reX) / 2;
-        const ecY = (leY + reY) / 2;
-        const ed = Math.hypot(reX - leX, reY - leY);
-
-        let x1: number, y1: number, x2: number, y2: number;
-
-        if (ed > 5) {
-          const targetSize = ed * (ARCFACE_SIZE / ARCFACE_EYE_DIST);
-          x1 = ecX - targetSize / 2;
-          y1 = ecY - targetSize * ARCFACE_EYE_Y_RATIO;
-          x2 = x1 + targetSize;
-          y2 = y1 + targetSize;
-        } else {
-          const bx1 = (box[0] - padX) / scale;
-          const by1 = (box[1] - padY) / scale;
-          const bx2 = (box[2] - padX) / scale;
-          const by2 = (box[3] - padY) / scale;
-          const expandW = (bx2 - bx1) * 0.2;
-          const expandH = (by2 - by1) * 0.2;
-          x1 = bx1 - expandW / 2;
-          y1 = by1 - expandH / 2;
-          x2 = bx2 + expandW / 2;
-          y2 = by2 + expandH / 2;
+        // Map landmarks directly to the resized image coords (subtract padding)
+        const srcPoints: number[][] = [];
+        for (let k = 0; k < 5; k++) {
+          srcPoints.push([lm[k * 2] - padX, lm[k * 2 + 1] - padY]);
         }
 
-        // Clamp strictly inside image bounds, applying pixelRatio to scale coordinates
-        const safeX1 = Math.max(0, Math.floor(x1 * pixelRatio));
-        const safeY1 = Math.max(0, Math.floor(y1 * pixelRatio));
-        const safeX2 = Math.min(origRaw.width - 1, Math.ceil(x2 * pixelRatio));
-        const safeY2 = Math.min(origRaw.height - 1, Math.ceil(y2 * pixelRatio));
-        const safeW = safeX2 - safeX1;
-        const safeH = safeY2 - safeY1;
+        // Estimate similarity transform from detected landmarks to ArcFace standard
+        const matrix = estimateSimilarityTransform(srcPoints, ARCFACE_DST);
 
-        if (safeW < 10 || safeH < 10) {
-          console.warn(
-            `[FaceDetector] Face ${idx}: crop too small (${safeW}×${safeH}), skipping.`
-          );
-          continue;
-        }
-
-        console.log(
-          `[FaceDetector] Face ${idx}: ed=${ed.toFixed(1)} ` +
-          `crop=[${safeX1},${safeY1},${safeW}×${safeH}]`
-        );
-
-        // ── Pure-JS crop from full-res decoded pixels ─────────────────────
-        const croppedRGBA = cropRGBA(
-          origRaw.data as Uint8Array,
-          origRaw.width,
-          origRaw.height,
-          safeX1,
-          safeY1,
-          safeW,
-          safeH
-        );
-
-        // ── Pure-JS resize to 112×112 ─────────────────────────────────────
-        const resizedCropRGBA = resizeRGBA(
-          croppedRGBA,
-          safeW,
-          safeH,
+        // Warp image using pure-JS affine transform (bilinear interpolation)
+        const resizedCropRGBA = warpAffineRGBA(
+          resizedRaw.data as Uint8Array,
+          resizedRaw.width,
+          resizedRaw.height,
           ARCFACE_SIZE,
-          ARCFACE_SIZE
+          ARCFACE_SIZE,
+          matrix
         );
 
         // ── Encode to JPEG base64 ─────────────────────────────────────────
@@ -421,12 +389,14 @@ class FaceDetector {
           90
         );
 
-        console.log(
-          `[FaceDetector] Face ${idx}: encoded bytes=${Math.floor(cropBase64.length * 0.75)} cropBase64=${cropBase64.length}`
-        );
+        // Map the bounding box back to original image scale for UI display if needed
+        const origBoxX = (box[0] - padX) / scale;
+        const origBoxY = (box[1] - padY) / scale;
+        const origBoxW = (box[2] - box[0]) / scale;
+        const origBoxH = (box[3] - box[1]) / scale;
 
         detectedFaces.push({
-          bbox: { x: safeX1, y: safeY1, width: safeW, height: safeH },
+          bbox: { x: origBoxX, y: origBoxY, width: origBoxW, height: origBoxH },
           cropBase64,
           detScore: score,
         });
