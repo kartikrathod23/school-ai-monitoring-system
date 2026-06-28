@@ -7,33 +7,36 @@ import {
     ActivityIndicator,
     Image,
     ScrollView,
+    Alert,
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
+import { getOfflineMealSessionById, updateMealSessionStatus } from "@/src/db/offlineMeal";
+import { syncOfflineMeals } from "@/src/services/syncManager.service";
+import { useAuthStore } from "@/src/store/auth.store";
 
-import {
-    getMealSession,
-    finalizeMealSession,
-} from "@/src/services/meal.service";
+
 
 export default function MealReviewScreen() {
-    const { sessionId } =useLocalSearchParams();
-    const [meal, setMeal] =useState<any>(null);
-    const [loading, setLoading] =useState(true);
-    const [saving, setSaving] =useState(false);
+    const { sessionId, fromHistory } = useLocalSearchParams();
+    const { token } = useAuthStore();
+    const [meal, setMeal] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
 
     useEffect(() => {
-        loadMeal();
-    }, []);
+        if (sessionId) {
+            loadMeal();
+        }
+    }, [sessionId]);
 
     const loadMeal = async () => {
         try {
-            const response =await getMealSession(sessionId as string)
-            setMeal(response.data.data);
-
+            const session = await getOfflineMealSessionById(sessionId as string);
+            setMeal(session);
         } catch (error) {
-            console.log(error);
+            console.error("Failed to load local meal session:", error);
         } finally {
             setLoading(false);
         }
@@ -41,15 +44,33 @@ export default function MealReviewScreen() {
 
     const confirmMeal = async () => {
         try {
-            setSaving(true);
-            await finalizeMealSession(
-                sessionId as string
-            );
-            router.back();
-        } catch (error) {
-            console.log(error);
+            // Already saved locally. Just return to dashboard.
+            Alert.alert("Success", "Meal count saved locally.");
+            router.dismissAll();
+        } catch (error: any) {
+            console.error(error);
+            Alert.alert("Error", error.message || "Something went wrong");
+        }
+    };
+
+    const handleManualSync = async () => {
+        if (!token) {
+            Alert.alert("Error", "You must be online and logged in to sync.");
+            return;
+        }
+
+        try {
+            setSyncing(true);
+            await updateMealSessionStatus(sessionId as string, "SYNCING");
+            await syncOfflineMeals(token);
+            await loadMeal(); // Refresh status
+            Alert.alert("Success", "Meal session synced successfully!");
+        } catch (err: any) {
+            console.error("Manual sync failed:", err);
+            await loadMeal();
+            Alert.alert("Sync Failed", err.message || "Check your internet connection.");
         } finally {
-            setSaving(false);
+            setSyncing(false);
         }
     };
 
@@ -249,32 +270,46 @@ export default function MealReviewScreen() {
 
                 <View className="mt-8 flex-row gap-x-4 px-4">
 
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="flex-1 rounded-2xl border border-[#CBD5E1] bg-white py-4"
-                    >
+                    {!fromHistory ? (
+                        <>
+                            <TouchableOpacity
+                                onPress={() => router.back()}
+                                className="flex-1 rounded-2xl border border-[#CBD5E1] bg-white py-4"
+                            >
+                                <Text className="text-center font-bold text-[#475569]">
+                                    Retake Photos
+                                </Text>
+                            </TouchableOpacity>
 
-                        <Text className="text-center font-bold text-[#475569]">
-                            Retake Photos
-                        </Text>
-
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        disabled={saving}
-                        onPress={confirmMeal}
-                        className="flex-1 rounded-2xl bg-[#16A34A] py-4"
-                    >
-
-                        <Text className="text-center font-bold text-white">
-
-                            {saving
-                                ? "Saving..."
-                                : "Confirm Meal Count"}
-
-                        </Text>
-
-                    </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={confirmMeal}
+                                className="flex-1 rounded-2xl bg-[#16A34A] py-4"
+                            >
+                                <Text className="text-center font-bold text-white">
+                                    Confirm Meal Count
+                                </Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : meal.status !== "SYNCED" ? (
+                        <TouchableOpacity
+                            disabled={syncing}
+                            onPress={handleManualSync}
+                            className="flex-1 rounded-2xl bg-[#00A86B] py-4 shadow-sm"
+                        >
+                            <Text className="text-center font-bold text-white text-[16px]">
+                                {syncing ? "Syncing..." : "Sync Now"}
+                            </Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            onPress={() => router.back()}
+                            className="flex-1 rounded-2xl border border-[#CBD5E1] bg-white py-4"
+                        >
+                            <Text className="text-center font-bold text-[#475569]">
+                                Close
+                            </Text>
+                        </TouchableOpacity>
+                    )}
 
                 </View>
 

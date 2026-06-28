@@ -3,6 +3,7 @@ import {
   createMealSession,
   getMealSession,
   finalizeMealSession,
+  offlineMealSync,
 } from "./meal.controller";
 
 import { authenticate } from "../../common/middlewares/auth.middleware";
@@ -31,6 +32,13 @@ router.patch(
   authenticate,
   authorise(["TEACHER"]),
   finalizeMealSession
+);
+
+router.post(
+  "/offline-sync",
+  authenticate,
+  authorise(["TEACHER"]),
+  offlineMealSync
 );
 
 export default router;

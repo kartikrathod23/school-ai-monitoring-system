@@ -26,8 +26,8 @@ export const syncModelAssets = async (sectionId: string, token: string): Promise
       const clfInfo = await FileSystem.getInfoAsync(localAsset.classifierPath);
       const detInfo = await FileSystem.getInfoAsync(`${MODELS_DIR}det_Det_Retina_Net.onnx`);
 
-      // If files exist and are large enough, we can use the local model
-      if (bbInfo.exists && bbInfo.size > 100000 && clfInfo.exists && clfInfo.size > 100000 && detInfo.exists && detInfo.size > 100000) {
+      // If files exist, we can use the local model
+      if (bbInfo.exists && (bbInfo.size || 0) > 10000 && clfInfo.exists && (clfInfo.size || 0) > 10000 && detInfo.exists && (detInfo.size || 0) > 10000) {
         console.log(`[ModelSync] Model exists locally. Skipping API fetch.`);
         console.log(`[ModelSync] Location (Backbone): ${localAsset.backbonePath}`);
         console.log(`[ModelSync] Location (Classifier): ${localAsset.classifierPath}`);

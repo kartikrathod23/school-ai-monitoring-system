@@ -31,7 +31,14 @@ export function StudentSelectModal({
 }: StudentSelectModalProps) {
   const [search, setSearch] = useState("");
 
-  const filteredStudents = students.filter((s) => {
+  const unknownStudent: StudentListItem = {
+    studentId: "UNKNOWN_MANUAL",
+    rollNumber: -1,
+    firstName: "Unknown",
+    lastName: "Student",
+  };
+
+  const filteredStudents = [unknownStudent, ...students].filter((s) => {
     const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
     return fullName.includes(search.toLowerCase()) || s.rollNumber.toString().includes(search);
   });

@@ -15,6 +15,7 @@
 import * as SQLite from "expo-sqlite";
 
 let db: SQLite.SQLiteDatabase | null = null;
+let initPromise: Promise<void> | null = null;
 
 export const getDb = (): SQLite.SQLiteDatabase => {
   if (!db) throw new Error("DB not initialized. Call initLocalDb() first.");
@@ -22,11 +23,15 @@ export const getDb = (): SQLite.SQLiteDatabase => {
 };
 
 export const initLocalDb = async (): Promise<void> => {
-  db = await SQLite.openDatabaseAsync("attendance_offline.db");
+  if (db) return;
+  if (initPromise) return initPromise;
 
-  // Enable WAL mode for better concurrent read performance
-  await db.execAsync("PRAGMA journal_mode = WAL;");
-  await db.execAsync("PRAGMA foreign_keys = ON;");
+  initPromise = (async () => {
+    db = await SQLite.openDatabaseAsync("attendance_offline.db");
+
+    // Enable WAL mode for better concurrent read performance
+    await db.execAsync("PRAGMA journal_mode = WAL;");
+    await db.execAsync("PRAGMA foreign_keys = ON;");
 
   await db.execAsync(`
     -- ─────────────────────────────────────────────────────────────
@@ -102,6 +107,24 @@ export const initLocalDb = async (): Promise<void> => {
       cached_at           TEXT    NOT NULL
     );
 
+    -- ─────────────────────────────────────────────────────────────
+    -- Offline Meal Sessions
+    -- Records head count for Mid Day Meal, detected offline.
+    -- ─────────────────────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS offline_meal_sessions (
+      id                  TEXT PRIMARY KEY,
+      section_id          TEXT    NOT NULL,
+      date                TEXT    NOT NULL,  -- "YYYY-MM-DD"
+      status              TEXT    NOT NULL DEFAULT 'PENDING_SYNC',
+        -- 'PENDING_SYNC' | 'SYNCING' | 'SYNCED' | 'SYNC_FAILED'
+      total_detected      INTEGER NOT NULL,
+      detector_version    TEXT,
+      device_id           TEXT    NOT NULL,
+      created_at          TEXT    NOT NULL,
+      synced_at           TEXT,              -- set when SYNCED
+      server_session_id   TEXT               -- server's MealSession.id
+    );
+
     -- Indexes for common queries
     CREATE INDEX IF NOT EXISTS idx_records_session_id
       ON offline_attendance_records(session_id);
@@ -111,7 +134,12 @@ export const initLocalDb = async (): Promise<void> => {
       ON offline_attendance_sessions(status);
     CREATE INDEX IF NOT EXISTS idx_student_cache_section
       ON section_student_cache(section_id);
+    CREATE INDEX IF NOT EXISTS idx_meal_sessions_status
+      ON offline_meal_sessions(status);
   `);
 
-  console.log("[LocalDB] Initialized successfully.");
+    console.log("[LocalDB] Initialized successfully.");
+  })();
+
+  return initPromise;
 };

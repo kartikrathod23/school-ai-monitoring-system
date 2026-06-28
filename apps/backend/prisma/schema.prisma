@@ -355,6 +355,11 @@ model MealSession {
 
   images MealImage[]
 
+  // Offline meal metadata
+  isOfflineSync     Boolean @default(false)
+  deviceId          String?
+  detectorVersion   String?
+
   createdAt DateTime @default(now())
 
   @@unique([sectionId, date])

@@ -15,10 +15,8 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 
-import {
-    startMealSession,
-    getMealSession,
-} from "@/src/services/meal.service";
+import { createOfflineMealSession } from "@/src/db/offlineMeal";
+import { faceDetector } from "@/src/ml/faceDetector";
 import { api } from "@/src/lib/api";
 
 export default function MealCountScreen() {
@@ -27,6 +25,7 @@ export default function MealCountScreen() {
     const cameraRef = useRef<any>(null);
     const [images, setImages] =useState<string[]>([]);
     const [uploading, setUploading] =useState(false);
+    const [progressText, setProgressText] = useState("");
     const [sectionId, setSectionId] =useState("");
 
     useEffect(() => {
@@ -55,9 +54,9 @@ export default function MealCountScreen() {
             return;
         }
 
-        const photo =await cameraRef.current.takePictureAsync({quality: 0.7,});
+        const photo =await cameraRef.current.takePictureAsync({quality: 0.7, base64: true});
 
-        setImages((prev) => [...prev, photo.uri,]);
+        setImages((prev) => [...prev, photo.base64,]);
     };
 
     const removeImage = (index: number) => {
@@ -69,58 +68,40 @@ export default function MealCountScreen() {
     const submitMeal = async () => {
         try {
             setUploading(true);
-            const location =await Location.getCurrentPositionAsync({});
-            const formData = new FormData();
 
-            formData.append("sectionId", sectionId );
-            formData.append("latitude",String(location.coords.latitude));
-            formData.append("longitude",String(location.coords.longitude));
+            let totalDetected = 0;
 
-            images.forEach((uri, index) => {
-                formData.append("images", {
-                    uri,
-                    name: `meal-${index}.jpg`,
-                    type: "image/jpeg",
-                } as any);
+            if (!faceDetector.ready) {
+                setProgressText("Initializing face detector...");
+                await faceDetector.initialize();
+            }
+
+            setProgressText("Processing photos...");
+            // Run on-device face detection for each image
+            for (const base64 of images) {
+                const faces = await faceDetector.detectFaces(base64);
+                totalDetected += faces.length;
+            }
+
+            // Create offline session
+            const detectorVersion = faceDetector.ready ? "Det_Retina_Net" : "unknown";
+            const sessionId = await createOfflineMealSession(sectionId, totalDetected, detectorVersion);
+
+            setUploading(false);
+            
+            router.push({
+                pathname: "/(protected)/meal-review",
+                params: { sessionId },
             });
 
-            const response = await startMealSession(formData);
-            const sessionId =response.data.data.id;
-
-            pollMealResult(sessionId);
-
         } catch (error: any) {
+            console.error("Local meal processing error:", error);
             Alert.alert(
                 "Error",
-                error?.response?.data?.message ||
-                "Meal processing failed"
+                error.message || "Meal processing failed"
             );
             setUploading(false);
         }
-    };
-
-    const pollMealResult = async (
-        sessionId: string
-    ) => {
-
-        const interval =
-            setInterval(async () => {
-                try{
-                    const response =await getMealSession(sessionId);
-                    const session =response.data.data;
-                    if (session.status === "PROCESSED") {
-                        clearInterval(interval);
-                        setUploading(false);
-                        router.push({
-                            pathname: "/(protected)/meal-review",
-                            params: {sessionId,},
-                        });
-                    }
-
-                } catch (error) {
-                    console.log(error);
-                }
-            }, 3000);
     };
 
     if (!permission?.granted) {
@@ -248,7 +229,7 @@ export default function MealCountScreen() {
                                 >
 
                                     <Image
-                                        source={{ uri }}
+                                        source={{ uri: "data:image/jpeg;base64," + uri }}
                                         className="h-28 w-24 rounded-2xl"
                                     />
 
@@ -301,7 +282,7 @@ export default function MealCountScreen() {
                         <Text className="text-center text-[16px] font-bold text-white">
 
                             {uploading
-                                ? "AI Processing Meal Count..."
+                                ? progressText || "AI Processing Meal Count..."
                                 : `Submit for Processing (${images.length} images)`}
 
                         </Text>

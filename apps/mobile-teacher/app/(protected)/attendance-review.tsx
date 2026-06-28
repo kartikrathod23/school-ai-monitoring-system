@@ -28,7 +28,7 @@ import { OfflineAttendanceSession, OfflineAttendanceRecord } from "@/src/types/a
 import { StudentSelectModal, StudentListItem } from "@/src/components/StudentSelectModal";
 
 export default function AttendanceReviewScreen() {
-  const { sessionId } = useLocalSearchParams();
+  const { sessionId, fromHistory } = useLocalSearchParams();
   const { token } = useAuthStore();
   const [permission, requestPermission] = useCameraPermissions();
   
@@ -37,6 +37,21 @@ export default function AttendanceReviewScreen() {
   const [session, setSession] = useState<OfflineAttendanceSession | null>(null);
   const [records, setRecords] = useState<OfflineAttendanceRecord[]>([]);
   const [students, setStudents] = useState<StudentListItem[]>([]);
+
+  const handleManualSync = async () => {
+    if (!token) return;
+    setSyncing(true);
+    try {
+      await syncOfflineAttendance(token);
+      Alert.alert("Sync Completed", "Attendance has been successfully synchronized to the server.");
+      await loadData();
+    } catch (err) {
+      console.log(err);
+      Alert.alert("Sync Failed", "An error occurred while syncing attendance.");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Modals state
   const [studentSelectVisible, setStudentSelectVisible] = useState(false);
@@ -80,18 +95,7 @@ export default function AttendanceReviewScreen() {
     return () => clearInterval(interval);
   }, [sessionId]);
 
-  const handleManualSync = async () => {
-    if (!token) return;
-    setSyncing(true);
-    try {
-      await syncOfflineAttendance(token);
-      await loadData();
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setSyncing(false);
-    }
-  };
+
 
   // Re-assign a record to a selected student
   const onStudentSelected = async (student: StudentListItem) => {
@@ -156,8 +160,9 @@ export default function AttendanceReviewScreen() {
 
   if (!session) return <View className="flex-1 bg-[#F4F7FB]" />;
 
-  const present = records.filter((r) => r.status === "PRESENT" || r.status === "MANUAL");
-  const absent = records.filter((r) => r.status === "ABSENT");
+  const enrolledRecords = records.filter(r => r.rollNumber !== -1);
+  const present = enrolledRecords.filter((r) => r.status === "PRESENT" || r.status === "MANUAL");
+  const absent = enrolledRecords.filter((r) => r.status === "ABSENT");
   
   // Sort records: Unknowns first (rollNumber = -1), then Present/Manual, then Absent
   const sortedRecords = [...records].sort((a, b) => {
@@ -174,7 +179,7 @@ export default function AttendanceReviewScreen() {
   return (
     <SafeAreaView className="flex-1 bg-[#F4F7FB]">
       <View className="flex-row items-center justify-between bg-[#2563EB] px-4 py-3">
-        <TouchableOpacity onPress={() => router.navigate("/(protected)/dashboard")} className="flex-row items-center">
+        <TouchableOpacity onPress={() => router.dismissAll()} className="flex-row items-center">
           <Ionicons name="home" size={18} color="white" />
           <Text className="ml-1 text-white"> Home</Text>
         </TouchableOpacity>
@@ -199,7 +204,7 @@ export default function AttendanceReviewScreen() {
 
           <View className="mt-4 flex-row justify-between">
             <View className="w-[31%] rounded-2xl bg-[#4F7EFF] py-4">
-              <Text className="text-center text-2xl font-bold text-white">{records.length}</Text>
+              <Text className="text-center text-2xl font-bold text-white">{enrolledRecords.length}</Text>
               <Text className="text-center text-white">Total</Text>
             </View>
 
@@ -303,27 +308,38 @@ export default function AttendanceReviewScreen() {
           );
         })}
 
-        <View className="mt-8 flex-row gap-x-4">
-          <TouchableOpacity
-            onPress={() => router.navigate("/(protected)/dashboard")}
-            className="flex-1 items-center justify-center rounded-2xl border border-gray-300 bg-white py-4"
-          >
-            <Text className="font-semibold text-gray-700">Done</Text>
-          </TouchableOpacity>
+        <View className="mt-8 mb-4 flex-row gap-x-4">
+          {!fromHistory ? (
+            <TouchableOpacity
+              onPress={() => router.dismissAll()}
+              className="flex-1 items-center justify-center rounded-2xl bg-[#2563EB] py-4 shadow-sm"
+            >
+              <Text className="font-bold text-lg text-white">Confirm Attendance</Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={() => router.back()}
+                className="flex-1 items-center justify-center rounded-2xl border border-gray-300 bg-white py-4 shadow-sm"
+              >
+                <Text className="font-bold text-lg text-gray-700">Close</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            disabled={syncing || session.status === "SYNCED"}
-            onPress={handleManualSync}
-            className={`flex-1 items-center justify-center rounded-2xl py-4 ${session.status === "SYNCED" ? "bg-green-500" : "bg-[#2563EB]"}`}
-          >
-            {syncing ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="font-semibold text-white">
-                {session.status === "SYNCED" ? "Synced" : "Sync Now"}
-              </Text>
-            )}
-          </TouchableOpacity>
+              {session?.status !== "SYNCED" && (
+                <TouchableOpacity
+                  disabled={syncing}
+                  onPress={handleManualSync}
+                  className="flex-1 items-center justify-center rounded-2xl bg-orange-500 py-4 shadow-sm"
+                >
+                  {syncing ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text className="font-bold text-lg text-white">Sync Now</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
 

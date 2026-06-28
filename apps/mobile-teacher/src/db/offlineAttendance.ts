@@ -63,7 +63,7 @@ export const getPendingSyncSessions = async (): Promise<OfflineAttendanceSession
   const db = getDb();
   const rows = await db.getAllAsync<any>(
     `SELECT * FROM offline_attendance_sessions
-     WHERE status IN ('PENDING_SYNC', 'SYNC_FAILED')
+     WHERE status IN ('PENDING_SYNC', 'SYNC_FAILED', 'SYNCING')
      ORDER BY created_at ASC`
   );
   return rows.map(mapSession);
@@ -92,6 +92,36 @@ export const getAllSessions = async (sectionId: string): Promise<OfflineAttendan
     [sectionId]
   );
   return rows.map(mapSession);
+};
+
+export const getAllSessionsWithStats = async (): Promise<(OfflineAttendanceSession & { presentCount: number; absentCount: number; attendancePercentage: number })[]> => {
+  const db = getDb();
+  const rows = await db.getAllAsync<any>(
+    `SELECT s.*, 
+            SUM(CASE WHEN r.student_id NOT LIKE 'UNKNOWN_%' THEN 1 ELSE 0 END) as total_students,
+            SUM(CASE WHEN r.status = 'PRESENT' AND r.student_id NOT LIKE 'UNKNOWN_%' THEN 1 ELSE 0 END) as present_count,
+            SUM(CASE WHEN r.status = 'ABSENT' AND r.student_id NOT LIKE 'UNKNOWN_%' THEN 1 ELSE 0 END) as absent_count
+     FROM offline_attendance_sessions s
+     LEFT JOIN offline_attendance_records r ON s.id = r.session_id
+     GROUP BY s.id
+     ORDER BY s.date DESC`
+  );
+  
+  return rows.map((row) => {
+    const session = mapSession(row);
+    const presentCount = row.present_count || 0;
+    const totalStudents = row.total_students || 0;
+    const attendancePercentage = totalStudents > 0 
+      ? Math.round((presentCount / totalStudents) * 100) 
+      : 0;
+
+    return {
+      ...session,
+      presentCount,
+      absentCount: row.absent_count || 0,
+      attendancePercentage
+    };
+  });
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -163,19 +193,24 @@ export const reassignRecordToStudent = async (
   const db = getDb();
   
   // 1. Delete the existing ABSENT record for the target student (if any)
-  // We use executeAsync or runAsync multiple times safely
-  await db.runAsync(
-    `DELETE FROM offline_attendance_records 
-     WHERE session_id = ? AND student_id = ? AND id != ?`,
-    [sessionId, targetStudentId, sourceRecordId]
-  );
+  // Only delete if it's a known student
+  if (targetRollNumber !== -1) {
+    await db.runAsync(
+      `DELETE FROM offline_attendance_records 
+       WHERE session_id = ? AND student_id = ? AND id != ?`,
+      [sessionId, targetStudentId, sourceRecordId]
+    );
+  }
 
-  // 2. Update the source record to point to the new student and mark PRESENT
+  // 2. Update the source record to point to the new student
+  const status = targetRollNumber === -1 ? 'MANUAL' : 'PRESENT';
+  const finalStudentId = targetRollNumber === -1 ? `UNKNOWN_${uuidv4()}` : targetStudentId;
+  
   await db.runAsync(
     `UPDATE offline_attendance_records
-     SET student_id = ?, roll_number = ?, student_name = ?, status = 'PRESENT', is_manual_override = 1
+     SET student_id = ?, roll_number = ?, student_name = ?, status = ?, is_manual_override = 1
      WHERE id = ?`,
-    [targetStudentId, targetRollNumber, targetStudentName, sourceRecordId]
+    [finalStudentId, targetRollNumber, targetStudentName, status, sourceRecordId]
   );
 };
 

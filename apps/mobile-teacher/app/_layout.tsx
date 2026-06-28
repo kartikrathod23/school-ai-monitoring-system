@@ -34,13 +34,10 @@ export default function RootLayout() {
         return;
       }
 
-      // Network just came back after being offline — trigger sync
+      // Network just came back after being offline
       if (wasOfflineRef.current && token) {
         wasOfflineRef.current = false;
-        console.log("[Layout] Network restored — triggering offline sync...");
-        syncOfflineAttendance(token).catch((err) => {
-          console.warn("[Layout] Auto-sync failed:", err.message);
-        });
+        console.log("[Layout] Network restored. Manual sync available in View Attendance.");
       }
     });
 

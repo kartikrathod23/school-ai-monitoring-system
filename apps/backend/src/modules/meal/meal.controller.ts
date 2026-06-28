@@ -3,6 +3,7 @@ import {
   createMealSessionService,
   getMealSessionService,
   finalizeMealSessionService,
+  offlineMealSyncService,
 } from "./meal.service";
 
 export const createMealSession = async (
@@ -62,5 +63,29 @@ export const finalizeMealSession = async (
       success:false,
       message:error.message,
     });
+  }
+};
+
+export const offlineMealSync = async (req: any, res: Response) => {
+  try {
+    const payload = req.body;
+
+    if (!payload.sectionId || !payload.date || payload.totalDetected === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "sectionId, date, and totalDetected are required",
+      });
+    }
+
+    const data = await offlineMealSyncService(req.user.userId, payload);
+
+    return res.status(201).json({
+      success: true,
+      message: "Offline meal synced successfully",
+      data,
+    });
+  } catch (error: any) {
+    console.error("[offlineMealSync] Error:", error.message);
+    return res.status(400).json({ success: false, message: error.message });
   }
 };

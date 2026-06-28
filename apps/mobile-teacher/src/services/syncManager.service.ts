@@ -11,6 +11,59 @@ import { getPendingSyncSessions, getSessionRecords, updateSessionStatus } from "
 import { OfflineSyncPayload } from "../types/attendance.types";
 import * as FileSystem from "expo-file-system/legacy";
 import { API_URL } from "../lib/api";
+import { getPendingMealSyncSessions, updateMealSessionStatus } from "../db/offlineMeal";
+
+export const syncOfflineMeals = async (token: string): Promise<void> => {
+  console.log("[SyncManager] Starting meal sync check...");
+
+  const pendingSessions = await getPendingMealSyncSessions();
+  if (pendingSessions.length === 0) {
+    console.log("[SyncManager] No pending meal sessions to sync.");
+    return;
+  }
+
+  console.log(`[SyncManager] Found ${pendingSessions.length} meal sessions to sync.`);
+
+  let hasErrors = false;
+  let lastError: any = null;
+
+  for (const session of pendingSessions) {
+    try {
+      await updateMealSessionStatus(session.id, "SYNCING");
+
+      const payload = {
+        sectionId: session.sectionId,
+        date: session.date,
+        deviceId: session.deviceId,
+        detectorVersion: session.detectorVersion,
+        totalDetected: session.totalDetected,
+      };
+
+      const response = await axios.post(
+        `${API_URL}/meal/offline-sync`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        await updateMealSessionStatus(session.id, "SYNCED", response.data.data.sessionId);
+        console.log(`[SyncManager] Meal Session ${session.id} synced successfully.`);
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (err: any) {
+      hasErrors = true;
+      lastError = err;
+      const detail = err.response?.data?.message || err.message;
+      console.warn(`[SyncManager] Failed to sync meal session ${session.id}:`, detail);
+      await updateMealSessionStatus(session.id, "SYNC_FAILED");
+    }
+  }
+
+  if (hasErrors) {
+    throw lastError;
+  }
+};
 
 export const syncOfflineAttendance = async (token: string): Promise<void> => {
   console.log("[SyncManager] Starting sync check...");
@@ -22,6 +75,9 @@ export const syncOfflineAttendance = async (token: string): Promise<void> => {
   }
 
   console.log(`[SyncManager] Found ${pendingSessions.length} sessions to sync.`);
+
+  let hasErrors = false;
+  let lastError: any = null;
 
   for (const session of pendingSessions) {
     try {
@@ -82,16 +138,21 @@ export const syncOfflineAttendance = async (token: string): Promise<void> => {
         throw new Error(response.data.message);
       }
     } catch (err: any) {
+      hasErrors = true;
+      lastError = err;
       const detail = err.response?.data?.message || err.message;
-      console.error(`[SyncManager] Failed to sync session ${session.id}:`, detail);
+      console.warn(`[SyncManager] Failed to sync session ${session.id}:`, detail);
 
       if (detail === "Section not assigned to this teacher") {
         console.warn(`[SyncManager] Skipping session ${session.id} as the section is no longer assigned.`);
         await updateSessionStatus(session.id, "SYNC_FAILED");
-        // We do not throw, allowing the loop to continue syncing other valid sessions
       } else {
         await updateSessionStatus(session.id, "SYNC_FAILED");
       }
     }
+  }
+
+  if (hasErrors) {
+    throw lastError;
   }
 };

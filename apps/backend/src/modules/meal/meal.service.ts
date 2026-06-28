@@ -115,3 +115,49 @@ export const finalizeMealSessionService =async (sessionId:string) => {
       },
     });
 };
+
+export const offlineMealSyncService = async (userId: string, payload: any) => {
+  const teacherSection = await prisma.teacherSection.findFirst({
+    where: {
+      teacher: { userId },
+      sectionId: payload.sectionId,
+    },
+  });
+
+  if (!teacherSection) {
+    throw new Error("Section not assigned to this teacher");
+  }
+
+  // Upsert the meal session to avoid unique constraint errors if
+  // multiple syncs happen for the same section and date.
+  const parsedDate = new Date(payload.date);
+  
+  const mealSession = await prisma.mealSession.upsert({
+    where: {
+      sectionId_date: {
+        sectionId: payload.sectionId,
+        date: parsedDate,
+      },
+    },
+    update: {
+      teacherUserId: userId,
+      totalDetected: payload.totalDetected,
+      status: "CONFIRMED",
+      isOfflineSync: true,
+      deviceId: payload.deviceId,
+      detectorVersion: payload.detectorVersion,
+    },
+    create: {
+      sectionId: payload.sectionId,
+      teacherUserId: userId,
+      date: parsedDate,
+      totalDetected: payload.totalDetected,
+      status: "CONFIRMED",
+      isOfflineSync: true,
+      deviceId: payload.deviceId,
+      detectorVersion: payload.detectorVersion,
+    },
+  });
+
+  return { sessionId: mealSession.id };
+};

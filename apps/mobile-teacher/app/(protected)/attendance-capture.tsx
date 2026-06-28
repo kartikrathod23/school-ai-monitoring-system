@@ -134,10 +134,7 @@ export default function AttendanceCaptureScreen() {
       setProgressText("Finalizing results...");
       await finalizeOfflineSession();
 
-      // 4. Try to trigger a background sync if online (fire and forget)
-      if (token) {
-        syncOfflineAttendance(token).catch(console.error);
-      }
+
 
       // 5. Navigate to review screen
       router.push({

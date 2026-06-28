@@ -88,8 +88,6 @@ export default function DashboardScreen() {
 
         // Sync model assets + student embeddings in the background
         if (token) {
-          // Trigger offline data sync to backend
-          syncOfflineAttendance(token).catch(err => console.warn("[Dashboard] Sync offline attendance failed:", err.message));
 
           Promise.all([
             syncModelAssets(sectionId, token),
@@ -515,11 +513,34 @@ export default function DashboardScreen() {
               <TouchableOpacity onPress={() =>router.push("/(protected)/attendance-history")}>
                 <View className="ml-3">
                   <Text className="font-semibold text-[#0F172A]">
-                    View Previous Attendance
+                    View Attendance
                   </Text>
 
                   <Text className="mt-1 text-base text-gray-500">
                     Read-only access
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View className="mt-4 rounded-2xl border border-[#E2E8F0] bg-white p-4">
+            <View className="flex-row items-center">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-green-50">
+                <UtensilsCrossed
+                  size={20}
+                  color="#16A34A"
+                />
+              </View>
+
+              <TouchableOpacity onPress={() =>router.push("/(protected)/meal-history")}>
+                <View className="ml-3">
+                  <Text className="font-semibold text-[#0F172A]">
+                    View Meal History
+                  </Text>
+
+                  <Text className="mt-1 text-base text-gray-500">
+                    Sync or view past meal counts
                   </Text>
                 </View>
               </TouchableOpacity>
