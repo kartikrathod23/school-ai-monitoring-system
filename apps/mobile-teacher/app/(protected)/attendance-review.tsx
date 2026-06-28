@@ -164,15 +164,11 @@ export default function AttendanceReviewScreen() {
   const present = enrolledRecords.filter((r) => r.status === "PRESENT" || r.status === "MANUAL");
   const absent = enrolledRecords.filter((r) => r.status === "ABSENT");
   
-  // Sort records: Unknowns first (rollNumber = -1), then Present/Manual, then Absent
+  // Sort records: Unknowns first (rollNumber = -1), then strictly by rollNumber
   const sortedRecords = [...records].sort((a, b) => {
     if (a.rollNumber === -1 && b.rollNumber !== -1) return -1;
     if (b.rollNumber === -1 && a.rollNumber !== -1) return 1;
     
-    const aStatusWeight = a.status === "PRESENT" || a.status === "MANUAL" ? 0 : 1;
-    const bStatusWeight = b.status === "PRESENT" || b.status === "MANUAL" ? 0 : 1;
-    
-    if (aStatusWeight !== bStatusWeight) return aStatusWeight - bStatusWeight;
     return a.rollNumber - b.rollNumber;
   });
 

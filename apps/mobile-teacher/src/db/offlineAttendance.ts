@@ -99,7 +99,7 @@ export const getAllSessionsWithStats = async (): Promise<(OfflineAttendanceSessi
   const rows = await db.getAllAsync<any>(
     `SELECT s.*, 
             SUM(CASE WHEN r.student_id NOT LIKE 'UNKNOWN_%' THEN 1 ELSE 0 END) as total_students,
-            SUM(CASE WHEN r.status = 'PRESENT' AND r.student_id NOT LIKE 'UNKNOWN_%' THEN 1 ELSE 0 END) as present_count,
+            SUM(CASE WHEN (r.status = 'PRESENT' OR r.status = 'MANUAL') AND r.student_id NOT LIKE 'UNKNOWN_%' THEN 1 ELSE 0 END) as present_count,
             SUM(CASE WHEN r.status = 'ABSENT' AND r.student_id NOT LIKE 'UNKNOWN_%' THEN 1 ELSE 0 END) as absent_count
      FROM offline_attendance_sessions s
      LEFT JOIN offline_attendance_records r ON s.id = r.session_id
@@ -129,10 +129,10 @@ export const getAllSessionsWithStats = async (): Promise<(OfflineAttendanceSessi
 // ─────────────────────────────────────────────────────────────────
 
 export const upsertOfflineRecord = async (
-  record: Omit<OfflineAttendanceRecord, "id">
+  record: Omit<OfflineAttendanceRecord, "id"> & { id?: string }
 ): Promise<OfflineAttendanceRecord> => {
   const db = getDb();
-  const full: OfflineAttendanceRecord = { id: uuidv4(), ...record };
+  const full: OfflineAttendanceRecord = { ...record, id: record.id || uuidv4() };
 
   await db.runAsync(
     `INSERT OR REPLACE INTO offline_attendance_records

@@ -33,6 +33,17 @@ import {
   OfflineAttendanceRecord,
 } from "../types/attendance.types";
 
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return normA === 0 || normB === 0 ? 0 : dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
 // ─────────────────────────────────────────────────────────────────
 // saveCropToFilesystem
 // Saves a base64-encoded face crop as a JPEG on the device.
@@ -156,7 +167,27 @@ export const processAttendancePhoto = async (
       if (confidence < 0.45) {
         // Unknown face — needs manual review
         status = "MANUAL";
-        studentId = `UNKNOWN_${uuidv4()}`;
+        
+        // Deduplicate Unknown Faces using Cosine Similarity
+        let foundExistingUnknown = false;
+        for (const existingId in store.currentRecords) {
+          if (existingId.startsWith("UNKNOWN_")) {
+            const existingRec = store.currentRecords[existingId];
+            if (existingRec.embeddingVector) {
+              const sim = cosineSimilarity(embResult.embedding, existingRec.embeddingVector);
+              if (sim > 0.50) { // 0.50 is a solid threshold for MobileFaceNet
+                studentId = existingId;
+                foundExistingUnknown = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (!foundExistingUnknown) {
+          studentId = `UNKNOWN_${uuidv4()}`;
+        }
+        
         rollNumber = -1;
         studentName = "Unknown Student";
       } else if (confidence < 0.6) {
@@ -181,7 +212,8 @@ export const processAttendancePhoto = async (
       );
 
       // 5. Upsert record in SQLite
-      const record: Omit<OfflineAttendanceRecord, "id"> = {
+      const record: Omit<OfflineAttendanceRecord, "id"> & { id?: string } = {
+        id: existingRecord?.id,
         sessionId: session.id,
         studentId,
         rollNumber,
