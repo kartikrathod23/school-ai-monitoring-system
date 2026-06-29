@@ -21,7 +21,7 @@ WORKDIR /app
 
 # ── Install Python dependencies ──────────────────────────────────
 COPY apps/ml-service/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --no-compile --default-timeout=1000 -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 # ── Copy ml-service source ────────────────────────────────────────
 COPY apps/ml-service/main.py .

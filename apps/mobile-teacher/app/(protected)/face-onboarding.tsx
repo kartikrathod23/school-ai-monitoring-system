@@ -324,31 +324,24 @@ export default function FaceOnboardingScreen() {
 
         ListFooterComponent={
           (addedCount >= 2 || pendingCount > 0) ? (
-            <View className="px-5 mt-8 mb-8">
+            <View className="px-4 mt-8 mb-4">
               <TouchableOpacity
-                activeOpacity={0.8}
                 onPress={handleTrainModel}
                 disabled={isTraining}
-                className={`rounded-2xl py-4 flex-row justify-center items-center shadow-md ${
-                  isTraining ? "bg-[#818CF8]" : "bg-[#4338CA]"
+                className={`rounded-2xl py-4 flex-row justify-center items-center ${
+                  isTraining ? "bg-purple-400" : "bg-[#9333EA]"
                 }`}
               >
                 {isTraining ? (
-                  <>
-                    <ActivityIndicator color="white" />
-                    <Text className="ml-3 text-white font-bold text-base">Training Model...</Text>
-                  </>
+                  <ActivityIndicator color="white" />
                 ) : (
-                  <>
-                    <Ionicons name="hardware-chip" size={20} color="white" />
-                    <Text className="ml-2 text-white font-bold text-base">
-                      OnBoard Faces & Train Model
-                    </Text>
-                  </>
+                  <Text className="text-white font-bold text-lg">
+                    OnBoard Faces & Train Model
+                  </Text>
                 )}
               </TouchableOpacity>
-              <Text className="text-center text-xs text-[#64748B] mt-4">
-                Run this once after capturing faces for all students.
+              <Text className="text-center text-xs text-gray-500 mt-3">
+                Run this once after adding faces for all students.
               </Text>
             </View>
           ) : null

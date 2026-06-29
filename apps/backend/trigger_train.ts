@@ -3,7 +3,9 @@ import { Queue } from "bullmq";
 import IORedis from "ioredis";
 
 const prisma = new PrismaClient();
-const redisConnection = new IORedis("redis://localhost:6379");
+const redisHost = process.env.REDIS_HOST || "localhost";
+const redisPort = process.env.REDIS_PORT || 6379;
+const redisConnection = new IORedis(`redis://${redisHost}:${redisPort}`);
 const mlQueue = new Queue("ml-processing", { connection: redisConnection });
 
 async function run() {

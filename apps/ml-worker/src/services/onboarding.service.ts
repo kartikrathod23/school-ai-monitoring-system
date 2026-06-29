@@ -145,6 +145,29 @@ export const processBatchOnboardingForSection = async (sectionId: string) => {
     }
   });
 
+  // RECOVERY: Find students who have images but no embeddings (e.g., if DB was partially wiped)
+  const students = await prisma.student.findMany({
+    where: { sectionId },
+    include: { faceImages: true, faceEmbeddings: true }
+  });
+
+  for (const student of students) {
+    if (student.faceEmbeddings.length === 0 && student.faceImages.length > 0) {
+      // Check if this student is already in pendingSessions to avoid duplicates
+      if (!pendingSessions.some(s => s.studentId === student.id)) {
+        console.log(`[onboarding] Recovery: Found missing embeddings for student ${student.id}. Queuing for extraction.`);
+        pendingSessions.push({
+          id: `RECOVERY_${student.id}`,
+          studentId: student.id,
+          sectionId: sectionId,
+          status: "IMAGES_CAPTURED",
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as any);
+      }
+    }
+  }
+
   if (pendingSessions.length === 0) {
     console.log(`[onboarding] No pending onboarding sessions found for section ${sectionId}.`);
     return;
@@ -156,12 +179,13 @@ export const processBatchOnboardingForSection = async (sectionId: string) => {
     try {
       console.log(`[onboarding] Extracting embeddings for student: ${session.studentId}`);
 
+      // Fetch images by studentId so we find them even if the session record was deleted
       const images = await prisma.studentFaceImage.findMany({
-        where: { onboardingSessionId: session.id },
+        where: { studentId: session.studentId },
       });
 
       if (images.length === 0) {
-        throw new Error("No images found for onboarding session");
+        throw new Error("No images found for student");
       }
 
       const imageUrls = await presignImageUrls(images.map((img) => img.imageUrl));
@@ -201,10 +225,12 @@ export const processBatchOnboardingForSection = async (sectionId: string) => {
         });
       }
 
-      await prisma.faceOnboardingSession.update({
-        where: { id: session.id },
-        data: { status: "COMPLETED" },
-      });
+      if (!session.id.startsWith("RECOVERY_")) {
+        await prisma.faceOnboardingSession.update({
+          where: { id: session.id },
+          data: { status: "COMPLETED" },
+        });
+      }
 
       await prisma.student.update({
         where: { id: session.studentId },
@@ -215,10 +241,12 @@ export const processBatchOnboardingForSection = async (sectionId: string) => {
     } catch (error: any) {
       console.error(`[onboarding] Failed for student ${session.studentId}:`, error.message);
 
-      await prisma.faceOnboardingSession.update({
-        where: { id: session.id },
-        data: { status: "FAILED" },
-      });
+      if (!session.id.startsWith("RECOVERY_")) {
+        await prisma.faceOnboardingSession.update({
+          where: { id: session.id },
+          data: { status: "FAILED" },
+        });
+      }
 
       await prisma.student.update({
         where: { id: session.studentId },
