@@ -9,6 +9,7 @@ RUN npm ci --omit=dev
 FROM node:22-alpine AS builder
 WORKDIR /app
 
+RUN apk add --no-cache openssl
 COPY package*.json tsconfig.json ./
 RUN npm ci
 
@@ -37,6 +38,9 @@ COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/clie
 
 # Copy prisma schema for migrations
 COPY prisma/ ./prisma/
+
+# Copy base ONNX models
+COPY models/ ./models/
 
 EXPOSE 5000
 

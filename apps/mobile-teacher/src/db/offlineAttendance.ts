@@ -192,8 +192,13 @@ export const reassignRecordToStudent = async (
 ): Promise<void> => {
   const db = getDb();
   
-  // 1. Delete the existing ABSENT record for the target student (if any)
-  // Only delete if it's a known student
+  // 1. Fetch the source record before we modify it so we don't lose the original student
+  const sourceRecord = await db.getFirstAsync<any>(
+    `SELECT student_id, roll_number, student_name FROM offline_attendance_records WHERE id = ?`,
+    [sourceRecordId]
+  );
+  
+  // 2. Delete the existing ABSENT record for the target student (if any)
   if (targetRollNumber !== -1) {
     await db.runAsync(
       `DELETE FROM offline_attendance_records 
@@ -202,7 +207,7 @@ export const reassignRecordToStudent = async (
     );
   }
 
-  // 2. Update the source record to point to the new student
+  // 3. Update the source record to point to the new student
   const status = targetRollNumber === -1 ? 'MANUAL' : 'PRESENT';
   const finalStudentId = targetRollNumber === -1 ? `UNKNOWN_${uuidv4()}` : targetStudentId;
   
@@ -212,6 +217,23 @@ export const reassignRecordToStudent = async (
      WHERE id = ?`,
     [finalStudentId, targetRollNumber, targetStudentName, status, sourceRecordId]
   );
+  
+  // 4. Create a fallback ABSENT record for the original student (if they weren't unknown)
+  if (sourceRecord && sourceRecord.roll_number !== -1) {
+    const remaining = await db.getFirstAsync<any>(
+      `SELECT COUNT(*) as count FROM offline_attendance_records WHERE session_id = ? AND student_id = ?`,
+      [sessionId, sourceRecord.student_id]
+    );
+    
+    if (remaining && remaining.count === 0) {
+      await db.runAsync(
+        `INSERT INTO offline_attendance_records (
+          id, session_id, student_id, roll_number, student_name, status, confidence, captured_at, is_manual_override
+        ) VALUES (?, ?, ?, ?, ?, 'ABSENT', 0, ?, 0)`,
+        [uuidv4(), sessionId, sourceRecord.student_id, sourceRecord.roll_number, sourceRecord.student_name, new Date().toISOString()]
+      );
+    }
+  }
 };
 
 export const updateRecordWithNewPhoto = async (

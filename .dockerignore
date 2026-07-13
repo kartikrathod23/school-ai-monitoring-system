@@ -25,6 +25,8 @@
 
 # Old / unused huge folders
 apps/face_attendance
+apps/mobile-teacher
+apps/backend/uploads
 
 # Environment / Logs
 **/.env

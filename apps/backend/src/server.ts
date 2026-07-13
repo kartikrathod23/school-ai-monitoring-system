@@ -13,6 +13,33 @@ import modelSyncRoutes from "./modules/model-sync/modelSync.routes";
 
 dotenv.config();
 
+import fs from "fs";
+
+// Initialize base models for local development/first-time setup
+const initBaseModels = () => {
+  if (process.env.USE_LOCAL_UPLOAD !== "true") return;
+
+  const uploadsModelsDir = path.join(__dirname, "../uploads/models");
+  if (!fs.existsSync(uploadsModelsDir)) {
+    fs.mkdirSync(uploadsModelsDir, { recursive: true });
+  }
+
+  const baseModels = ["Det_Retina_Net.onnx", "Rec_Mobile_Net.onnx"];
+  const sourceDir = path.join(__dirname, "../../models");
+
+  baseModels.forEach((modelName) => {
+    const sourcePath = path.join(sourceDir, modelName);
+    const destPath = path.join(uploadsModelsDir, modelName);
+    
+    if (fs.existsSync(sourcePath) && !fs.existsSync(destPath)) {
+      console.log(`[Init] Copying base model ${modelName} to uploads folder...`);
+      fs.copyFileSync(sourcePath, destPath);
+    }
+  });
+};
+
+initBaseModels();
+
 const app = express();
 
 app.use(cors());

@@ -147,7 +147,11 @@ def register_model_asset(
 
 def run_pipeline(section_id: str, version_tag: str):
     timestamp = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-    classifier_version = f"clf-{version_tag}-{timestamp}"
+
+    unique_short = uuid.uuid4().hex[:8]
+    # Format: v1-a1b2c3d4
+    clean_version = version_tag.lower() if version_tag.lower().startswith('v') else f"v{version_tag}"
+    classifier_version = f"{clean_version}-{unique_short}"
     backbone_version = "MobileFaceNet-v1"  # backbone never changes
 
     print("\n" + "=" * 60)

@@ -22,9 +22,17 @@ export const syncModelAssets = async (sectionId: string, token: string): Promise
     let needsDownload = true;
 
     if (localAsset) {
-      const bbInfo = await FileSystem.getInfoAsync(localAsset.backbonePath);
-      const clfInfo = await FileSystem.getInfoAsync(localAsset.classifierPath);
-      const detInfo = await FileSystem.getInfoAsync(`${MODELS_DIR}det_Det_Retina_Net.onnx`);
+      let bbInfo: FileSystem.FileInfo = { exists: false, uri: "", isDirectory: false };
+      let clfInfo: FileSystem.FileInfo = { exists: false, uri: "", isDirectory: false };
+      let detInfo: FileSystem.FileInfo = { exists: false, uri: "", isDirectory: false };
+      
+      try {
+        bbInfo = await FileSystem.getInfoAsync(localAsset.backbonePath);
+        clfInfo = await FileSystem.getInfoAsync(localAsset.classifierPath);
+        detInfo = await FileSystem.getInfoAsync(`${MODELS_DIR}det_Det_Retina_Net.onnx`);
+      } catch (err) {
+        console.warn("[ModelSync] Error reading local model files (likely corrupted path). Forcing re-download.", err);
+      }
 
       // If files exist, we can use the local model
       if (bbInfo.exists && (bbInfo.size || 0) > 10000 && clfInfo.exists && (clfInfo.size || 0) > 10000 && detInfo.exists && (detInfo.size || 0) > 10000) {
@@ -106,13 +114,6 @@ export const syncModelAssets = async (sectionId: string, token: string): Promise
 
 export const syncStudentEmbeddings = async (sectionId: string, token: string): Promise<void> => {
   try {
-    const localStudents = await getCachedStudents(sectionId);
-    if (localStudents && localStudents.length > 0) {
-      console.log(`[ModelSync] Student embeddings exist locally. Skipping API fetch.`);
-      useAttendanceStore.getState().setSectionStudents(localStudents);
-      return;
-    }
-
     const res = await axios.get(`${API_URL}/model-sync/embeddings/${sectionId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -125,10 +126,16 @@ export const syncStudentEmbeddings = async (sectionId: string, token: string): P
 
     await cacheSectionStudents(students);
     useAttendanceStore.getState().setSectionStudents(students);
-    console.log(`[ModelSync] Synced ${students.length} student embeddings.`);
-
+    console.log(`[ModelSync] Synced ${students.length} student embeddings from server.`);
   } catch (error) {
-    console.error("[ModelSync] Failed to sync student embeddings:", error);
+    console.log("[ModelSync] API fetch failed, falling back to local cache.");
+    const localStudents = await getCachedStudents(sectionId);
+    if (localStudents && localStudents.length > 0) {
+      useAttendanceStore.getState().setSectionStudents(localStudents);
+      console.log(`[ModelSync] Loaded ${localStudents.length} students from local cache.`);
+    } else {
+      console.error("[ModelSync] Failed to sync student embeddings and no local cache available.", error);
+    }
   }
 };
 
